@@ -1,0 +1,432 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>深圳市精锐达网络技术有限公司</title>
+<!-- 456-->
+<style type="text/css">
+<!--
+.STYLE2 {font-size: 0px}
+.STYLE3 {font-size: 12px; }
+-->
+</style>
+</head>
+<script type="text/javascript">
+
+function getXMLHttp()
+{
+  var xmlHttp
+
+  try
+  {
+    //Firefox, Opera 8.0+, Safari
+    xmlHttp = new XMLHttpRequest();
+  }
+  catch(e)
+  {
+    //Internet Explorer
+    try
+    {
+      xmlHttp = new ActiveXObject("Msxml2.XMLHTTP");
+    }
+    catch(e)
+    {
+      try
+      {
+        xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+      }
+      catch(e)
+      {
+        alert("Your browser does not support AJAX!")
+        return false;
+      }
+    }
+  }
+  return xmlHttp;
+}
+function HandleResponse(response)
+{
+	var reponse_str;
+    var domain = response.split(",",3);
+    if(domain[1].length > 0) {
+      io = domain[1].split("=");
+    }
+    var iostr = io[1];
+	var ch = iostr.charAt(0);
+    if(ch == "1") {
+		reponse_str = "789<br>";
+    } else {
+		reponse_str = "123<br>";
+    }
+	ch = iostr.charAt(1);
+    if(ch == "1") {
+		reponse_str = reponse_str + " qbc<br>";
+    } else {
+		reponse_str = reponse_str + " edd<br>";
+    }
+	ch = iostr.charAt(2);
+    if(ch == "1") {
+		reponse_str = reponse_str + " aa<br>";
+    } else {
+		reponse_str = reponse_str + " aaa<br>";
+    }
+  var now = new Date();
+  var timestr = now.toLocaleString();
+  document.getElementById('ResponseDiv').innerHTML ="时间：" + timestr;
+  //document.getElementById('ResponseDiv').innerHTML = "Command Success:" + timestr;
+}
+
+function HandleQueryResponse(response)
+{
+  var domain = response.split(",",3);
+  if(domain[0].length > 0) {
+    io = domain[1].split("=");
+  }
+  var io_str = io[1];
+  var bit = io_str.charAt(0);
+  if(bit == "1") {
+	  window.document.question_form.led1.checked = true;
+  } else {
+	  window.document.question_form.led1.checked = false;
+  }
+  bit = io_str.charAt(1);
+  if(bit == "1") {
+	  window.document.question_form.led2.checked = true;
+  } else {
+	  window.document.question_form.led2.checked = false;
+  }
+  bit = io_str.charAt(2);
+  if(bit == "1") {
+	  window.document.question_form.led3.checked = true;
+  } else {
+	  window.document.question_form.led3.checked = false;
+  }
+  bit = io_str.charAt(3);
+  if(bit == "1") {
+	  window.document.question_form.led4.checked = true;
+  } else {
+	  window.document.question_form.led4.checked = false;
+  }
+  bit = io_str.charAt(4);
+  if(bit == "1") {
+	  window.document.question_form.led5.checked = true;
+  } else {
+	  window.document.question_form.led5.checked = false;
+  }
+  bit = io_str.charAt(5);
+  if(bit == "1") {
+	  window.document.question_form.led6.checked = true;
+  } else {
+	  window.document.question_form.led6.checked = false;
+  }
+  bit = io_str.charAt(6);
+  if(bit == "1") {
+	  window.document.question_form.led7.checked = true;
+  } else {
+	  window.document.question_form.led7.checked = false;
+  }
+  bit = io_str.charAt(7);
+  if(bit == "1") {
+	  window.document.question_form.led8.checked = true;
+  } else {
+	  window.document.question_form.led8.checked = false;
+  }
+  bit = io_str.charAt(8);
+  if(bit == "1") {
+	  window.document.question_form.led9.checked = true;
+  } else {
+	  window.document.question_form.led9.checked = false;
+  }
+  bit = io_str.charAt(9);
+  if(bit == "1") {
+	  window.document.question_form.led10.checked = true;
+  } else {
+	  window.document.question_form.led10.checked = false;
+  }
+  bit = io_str.charAt(10);
+  if(bit == "1") {
+	  window.document.question_form.led11.checked = true;
+  } else {
+	  window.document.question_form.led11.checked = false;
+  }
+  bit = io_str.charAt(11);
+  if(bit == "1") {
+	  window.document.question_form.led12.checked = true;
+  } else {
+	  window.document.question_form.led12.checked = false;
+  }
+  bit = io_str.charAt(12);
+  if(bit == "1") {
+	  window.document.question_form.led13.checked = true;
+  } else {
+	  window.document.question_form.led13.checked = false;
+  }
+  bit = io_str.charAt(13);
+  if(bit == "1") {
+	  window.document.question_form.led14.checked = true;
+  } else {
+	  window.document.question_form.led14.checked = false;
+  }
+  bit = io_str.charAt(14);
+  if(bit == "1") {
+	  window.document.question_form.led15.checked = true;
+  } else {
+	  window.document.question_form.led15.checked = false;
+  }
+   bit = io_str.charAt(15);
+  if(bit == "1") {
+	  window.document.question_form.led16.checked = true;
+  } else {
+	  window.document.question_form.led16.checked = false;
+  }
+  var now = new Date();
+  var timestr = now.toLocaleString();
+  document.getElementById('ResponseDiv').innerHTML = "时间：" + timestr;
+  //document.getElementById('ResponseDiv').innerHTML = "Query Success:�? + timestr;
+}
+function SetiovalueRequest()
+{
+  var xmlHttp = getXMLHttp();
+  var now = new Date();
+  var second = now.toLocaleString();
+  second = "timenow=" + second;
+  
+  xmlHttp.onreadystatechange = function()
+  {
+    if(xmlHttp.readyState == 4)
+    {
+      HandleResponse(xmlHttp.responseText);
+    }
+  }
+  
+  var ques = "";
+  if(window.document.question_form.led1.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led2.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led3.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led4.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led5.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led6.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led7.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led8.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led9.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led10.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led11.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led12.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led13.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led14.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led15.checked == true) {
+    ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  if(window.document.question_form.led16.checked == true) {
+     ques = ques + "1";
+  } else {
+    ques = ques + "0";
+  }
+  xmlHttp.open("GET", "/cgi-bin/io_request.cgi?setiovalue="+ques + "&" + second); 
+  xmlHttp.send(null);
+}
+function queryalloutRequest()
+{
+  var xmlHttp = getXMLHttp();
+  var now = new Date();
+  var second = now.toLocaleString();
+  second = "timenow=" + second;
+  
+  xmlHttp.onreadystatechange = function()
+  {
+    if(xmlHttp.readyState == 4)
+    {
+      HandleQueryResponse(xmlHttp.responseText);
+    }
+  }
+  
+  var ques = "--"; // + "&timenow=" + Data();
+  xmlHttp.open("GET", "/cgi-bin/io_request.cgi?queryallout="+ques + "&" + second); 
+  xmlHttp.send(null);
+}
+
+function HandleQueryInfochout(response)
+{
+  var domain = response.split(",",2);
+  if(domain[1].length > 0) {
+    io = domain[1].split("=",2);
+  }
+  var io_str = io[1];
+  document.getElementById('infochout').innerHTML = "(" + io_str + "路输出)";
+}
+
+function quary_infochout()
+{
+  var xmlHttp = getXMLHttp();
+  var now = new Date();
+  var second = now.toLocaleString();
+  second = "timenow=" + second;
+  
+  xmlHttp.onreadystatechange = function()
+  {
+    if(xmlHttp.readyState == 4)
+    {
+      HandleQueryInfochout(xmlHttp.responseText);
+    }
+  }
+  
+  var ques = "--";
+  xmlHttp.open("GET", "/cgi-bin/io_request.cgi?quary_infochout="+ques + "&" + second); 
+  xmlHttp.send(null);
+}
+
+
+
+function  timer_query_io_value() 
+{ 
+  quary_infochout();
+  queryalloutRequest();
+}
+
+function  body_load()
+{
+	var  tim_aip=window.setInterval(timer_query_io_value,30000); 
+	timer_query_io_value();
+}
+
+</script>
+
+<body onload= "body_load() ">
+<form name="question_form">
+  <table border="1" align="center" cellspacing="1">
+    <tr>
+      <td colspan="2"><div align="center">远程开关电源控制<div id='infochout'></div></div></td>
+    </tr>
+    <tr>
+      <td width="117"><div align="center">
+          <input type="checkbox" name = "led1">第1路 </div></td>
+      <td width="124"><div align="center">
+        <input type="checkbox" name = "led9">第9路 </div></td>
+    </tr>
+    <tr>
+      <td><div align="center">
+          <input type="checkbox" name = "led2">第2路</div></td>
+      <td><div align="center">
+        <input type="checkbox" name = "led10">第10路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center">
+          <input type="checkbox" name = "led3">第3路</div></td>
+      <td><div align="center">
+        <input type="checkbox" name = "led11">第11路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center">
+          <input type="checkbox" name = "led4">第4路</div></td>
+      <td><div align="center">
+        <input type="checkbox" name = "led12">第12路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center">
+          <input type="checkbox" name = "led5">第5路</div></td>
+      <td>
+        <div align="center">
+          <input type="checkbox" name = "led13">第13路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center">
+          <input type="checkbox" name = "led6">第6路</div></td>
+      <td>
+        <div align="center">
+          <input type="checkbox" name = "led14">第14路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center">
+          <input type="checkbox" name = "led7">第7路</div></td>
+      <td>
+        <div align="center">
+          <input type="checkbox" name = "led15">第15路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center"><span class="STYLE2">
+          <input type="checkbox" name = "led8">
+        </span>第8路</div></td>
+      <td>
+        <div align="center">
+          <input type="checkbox" name = "led16">第16路</div></td>
+    </tr>
+    <tr>
+      <td><div align="center" class="STYLE2">
+          <input name="button" type ="button" onClick ="queryalloutRequest();return true;" value="查询">
+      </div></td>
+      <td><div align="center" class="STYLE2">
+          <div align="center">
+            <input name="button2" type ="button" onClick ="SetiovalueRequest();return true;" value="设置">
+              </div>
+      </div></td>
+    </tr>
+    <tr>
+      <td colspan="2"><div id='ResponseDiv'>
+          <div align="left">...</div>
+      </div></td>
+    </tr>
+    <tr>
+      <td height="14" colspan="2"><div align="center">深圳市精锐达技术科技有限公司</div></td>
+    </tr>
+  </table>
+</form>
+</body>
+</html>
+
