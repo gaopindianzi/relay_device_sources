@@ -75,10 +75,10 @@ void dumpdata(void * _buffer,int len)
 {
 	int i;
 	unsigned char * buf = (unsigned char *)_buffer;
-	if(THISINFO)for(i=0;i<len;i++) {
-		printf("%X ",buf[i]);
+	if(1)for(i=0;i<len;i++) {
+		printf("%02X ",buf[i]);
 	}
-	if(THISINFO)printf("\r\n");
+	if(1)printf("\r\n");
 }
 
 #define LITTLE_UINT16(buffer)   (((uint16_t)(*((unsigned char *)(buffer)))) + (((uint16_t)(*(((unsigned char *)(buffer))+1)))<<8))
@@ -312,7 +312,7 @@ THREAD(thread_can485_read, arg)
 				}
 handle_one_modbus_packet:
 				//Ö´ÐÐÖ¸Áî
-				dumpdata(rs485_rx_buffer,index);
+				if(THISINFO)dumpdata(rs485_rx_buffer,index);
 
 				if(pcmd->pad0 != 0x00 || pcmd->pad1 != 0x5A) {
 					if(THISERROR)printf("0x00 0x5A Not Found!\r\n");

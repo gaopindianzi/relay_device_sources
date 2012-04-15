@@ -71,7 +71,6 @@
 #endif
 
 #define ASSERT_MSG(assert,msg) do{ if(THISERROR)if(!(assert)) { printf msg;  printf(" at %s:%d\r\n",__FILE__,__LINE__); while(1); } }while(0)
-
 //-------------------------------------------------------------------------------------------
 //  以下不要随便修改
 #if BOARD_TYPE != EXT_BOARD_IS_CAN485_MINIBOARD

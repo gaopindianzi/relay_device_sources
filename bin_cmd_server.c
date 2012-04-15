@@ -52,6 +52,7 @@
 #define THISINFO          DEBUG_ON_INFO
 #define THISERROR         DEBUG_ON_ERROR
 
+
 extern FILE * resetfile;
 
 int BspReadBoardInfo(CmdBoardInfo * info);

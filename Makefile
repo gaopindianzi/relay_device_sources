@@ -34,6 +34,7 @@ HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
 APP_TIMEIMG_ON = ON
 APP_CGI_ON = ON
 APP_485_ON = ON
+APP_MODBUS_TCP_ON  = ON
 #------------------------------------------------------------------------------
 
 
@@ -100,6 +101,12 @@ endif
 ifeq ($(APP_CGI_ON),ON)
 SRCS := $(SRCS) cgi_thread.c urom.c
 HWDEF += -DAPP_CGI_ON
+endif
+
+
+ifeq ($(APP_MODBUS_TCP_ON),ON)
+SRCS := $(SRCS) modbus_interface.c
+HWDEF += -DAPP_MODBUS_TCP_ON
 endif
 
 

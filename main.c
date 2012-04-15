@@ -49,6 +49,7 @@
 #include "time_handle.h"
 #include "can_485_uart.h"
 #include "udp_client_command.h"
+#include "modbus_interface.h"
 #include <dev/reset_avr.h>
 #include <dev/usartavr485.h>
 #include <cfg/platform_def.h>
@@ -420,6 +421,12 @@ config_finish:
 
 #ifdef APP_485_ON
 	StartCAN_485Srever();
+#endif
+
+
+
+#ifdef APP_MODBUS_TCP_ON
+	StartModbus_Interface();
 #endif
 
 	while(0) {
