@@ -27,7 +27,7 @@ BSP_BOARD_TYPE = $(EXT_BOARD_IS_4CHIN_4CHOUT)
 #
 #发布MAC地址
 #最后编码是x01\xee,双引号要用\引导
-ETHERNET_MAC = \"\x00\x06\x98\x30\x01\xFD\"
+ETHERNET_MAC = \"\x00\x06\x98\x30\x01\xFE\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
 
 #定义一些模块开关
