@@ -49,77 +49,87 @@
 #include "bsp.h"
 #include "debug.h"
 
-#define THISINFO        1
+#define THISINFO        0
 #define THISERROR       0
 #define THISASSERT      0
-#define DUMP_DATA_INFO  1
+#define DUMP_DATA_INFO  0
 
 
 #define BITS_TO_BS(bit_num)    ((bit_num+7)/8)
 
 
-int  ReadCoilStatus(uint8_t * pmodbus,unsigned int start,unsigned int number)
+int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus)
 {
 	uint8_t io_out_buffer[4];
+	uint16_t count;
 	uint32_t tmp;
+	uint16_t num;
 	int rc;
 	FILE * iofile = fopen("relayctl", "w+b");
-	//DEBUGMSG(THISINFO,("iofile=0x%X\r\n",(unsigned int)iofile));
 	ASSERT(iofile);
 	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
 	ASSERT(tmp);
+	num = tmp;
 	rc = _ioctl(_fileno(iofile), IO_OUT_GET, io_out_buffer);
 	fclose(iofile);
 	ASSERT(rc==0);
-
-	if(number) {
-		//范围内
+	count = pmodbus->bit_count_h;count <<= 8; count |= pmodbus->bit_count_l;
+	modbus_type_fc1_ack * pack = (modbus_type_fc1_ack *)pmodbus;
+	if(count) {
 		unsigned char B,b;
 		unsigned int i;
-		B = start/8;b = start % 8;
-		DEBUGMSG(THISINFO,("Read coil start=%d,number=%d\r\n",start,number));
-		for(i=0;i<number;i++) {
-			unsigned char msk = 1<<(i%8);
-			pmodbus[1+i/8] <<= 1;
-			if(B < BITS_TO_BS(tmp)) {
-			    pmodbus[1+i/8] |= (io_out_buffer[B] & (1<<b))?msk:0;
+		tmp = pmodbus->ref_number_h; tmp <<=8; tmp |= pmodbus->ref_number_l;
+		B = tmp / 8; b = tmp % 8;
+		
+		DEBUGMSG(THISINFO,("read bit counts(%d)\r\n",count));
+		for(i=0;i<count;i++) {
+			if(B < BITS_TO_BS(num)) {
+				if(io_out_buffer[B]&(1<<b)) {
+				    pack->bit_valus[i/8] |=  (1<<(i%8));
+				} else {
+					pack->bit_valus[i/8] &= ~(1<<(i%8));
+				}
 			} else {
-				pmodbus[1+i/8] &= ~msk;
+				pack->bit_valus[i/8] &= ~(1<<(i%8));
 			}
 			if(++b >= 8) {
 				b = 0;
 				++B;
 			}
 		}
-		//这里存放的是modbus/tcp数据的长度，等于字节的长度加上1
-		pmodbus[0] = BITS_TO_BS(number); 
-		//pmodbus[0] = (pmodbus[0]<2)?2:pmodbus[0];
-		//pmodbus[0] += 1; //加上number_bytes的占位一个字节
-		return 3 + pmodbus[0]; //返回发送的字节+head,1字节是数量位符,1字节是地址,1字节是功能码
+		pack->byte_count = BITS_TO_BS(count);
+		return 3 + pack->byte_count;  //加上头部的数据长度
+	} else {
+		DEBUGMSG(THISERROR,("pmodbus->bit_count == 0 error\r\n"));
+		pack->byte_count = 0;
+		return 3;
 	}
+	return 0;
 }
 
-int  ForceSingleCoil(uint8_t * pmodbus,unsigned int start,unsigned char onoff)
+int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 {
 	uint32_t tmp;
+	uint16_t index;
 	int rc;
 	FILE * iofile = fopen("relayctl", "w+b");
 	ASSERT(iofile);
 	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
 	ASSERT(rc==0);
-	{
+	index = pmodbus->ref_number_h; index <<= 8; index |= pmodbus->ref_number_l;
+	if(index < tmp) {
 		//范围内
 		unsigned char buffer[2];
-		buffer[1] = start >> 8;
-		buffer[0] = start & 0xFF;
-		if(onoff) {
+		buffer[1] = index >> 8;
+		buffer[0] = index & 0xFF;
+		if(pmodbus->onoff) {
 		    _ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
 		} else {
 			_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
 		}
-		fclose(iofile);
-		return 4;
 	}
+	fclose(iofile);
+	return sizeof(modbus_type_fc5_cmd);
 }
 
 void dumpdata(void * _buffer,int len);
@@ -128,7 +138,6 @@ int prase_modbus_protocol(TCPSOCKET * sock,char * pbuf,unsigned int len)
 {
 	int ret = 0; //返回应答的数据长度
 	modbus_tcp_head * phead = (modbus_tcp_head *)pbuf;
-	uint8_t  * pmodbus = (uint8_t *)(pbuf+sizeof(modbus_tcp_head));
 
 	if(DUMP_DATA_INFO)dumpdata(pbuf,len);
 
@@ -143,19 +152,15 @@ int prase_modbus_protocol(TCPSOCKET * sock,char * pbuf,unsigned int len)
 	switch(phead->function_code) {
 		case 0x01:
 		{
+			//modbus_type_fc1_cmd * pcmd = (modbus_type_fc1_cmd *)GET_MODBUS_DATA(phead);
 			DEBUGMSG(THISINFO,("modbus 0x01:\r\n"));
 			if(len < 4) {
 				DEBUGMSG(THISERROR,("len < 4 error\r\n"));
 				break;
 			} else {
-				unsigned int start,number;
-				start = pmodbus[0]; start <<= 8; start |= pmodbus[1];
-				number = pmodbus[2]; number <<= 8; number |= pmodbus[3];
-				DEBUGMSG(THISINFO,("ReadCoilStatus\r\n"));
-				len = ReadCoilStatus(pmodbus,start,number);
+				len = ReadCoilStatus(GET_MODBUS_DATA(phead));
 				if(len > 0) {
-					DEBUGMSG(THISINFO,("ReadCoilStatus Ok len(%d)\r\n",len));
-					//len += 1; //加上1字节的
+					DEBUGMSG(THISINFO,("ReadCoilStatus Ok ret len(%d)\r\n",len));
 					phead->lengthl = len & 0xFF;
 					phead->lengthh = len >> 8;
 					return len + sizeof(modbus_tcp_head) - 2;
@@ -171,14 +176,13 @@ int prase_modbus_protocol(TCPSOCKET * sock,char * pbuf,unsigned int len)
 			if(len < 4) {
 				DEBUGMSG(THISERROR,("len error!\r\n"));
 			} else {
-				unsigned int start,onoff;
-				start = pmodbus[0]; start <<= 8; start |= pmodbus[1];
-				onoff = pmodbus[2];
 				DEBUGMSG(THISINFO,("ForceSingleCoil\r\n"));
-				len = ForceSingleCoil(pmodbus,start,onoff);
+				len = ForceSingleCoil(GET_MODBUS_DATA(phead));
 				if(len > 0) {
-					DEBUGMSG(THISINFO,("ForceSingleCoil Ok,len(%d)\r\n",len));
-					return len + sizeof(modbus_tcp_head);
+					DEBUGMSG(THISINFO,("ForceSingleCoil Ok,ret len(%d)\r\n",len));
+					phead->lengthl = len & 0xFF;
+					phead->lengthh = len >> 8;
+					return len + sizeof(modbus_tcp_head) - 2;
 				} else {
 					DEBUGMSG(THISERROR,("ForceSingleCoil Ko\r\n"));
 				}
