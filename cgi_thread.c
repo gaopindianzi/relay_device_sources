@@ -32,7 +32,7 @@
 
 #include <dev/watchdog.h>
 #include <sys/timer.h>
-
+#include "sysdef.h"
 #include "bsp.h"
 
 #define THISINFO           DEBUG_ON_INFO
@@ -141,6 +141,8 @@ THREAD(Service, arg)
     FILE *stream;
     u_char id = (u_char) ((uptr_t) arg);
 
+
+	NutThreadSetPriority(TCP_BIN_SERVER_PRI - 1);
     /*
      * Now loop endless for connections.
      */
@@ -171,7 +173,7 @@ THREAD(Service, arg)
          * keep the client connected in low memory situations.
          */
 #if defined(__AVR__)
-        while (NutHeapAvailable() < 8192) {
+        while (NutHeapAvailable() < 4096) {
 #else
         while (NutHeapAvailable() < 4096) {
 #endif
