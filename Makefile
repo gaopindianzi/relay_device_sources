@@ -35,6 +35,7 @@ APP_TIMEIMG_ON = ON
 APP_CGI_ON = ON
 APP_485_ON = ON
 APP_MODBUS_TCP_ON  = ON
+APP_MULTI_MANGER_FRAME = ON
 #------------------------------------------------------------------------------
 
 
@@ -109,6 +110,11 @@ SRCS := $(SRCS) modbus_interface.c
 HWDEF += -DAPP_MODBUS_TCP_ON
 endif
 
+
+ifeq ($(APP_MULTI_MANGER_FRAME),ON)
+SRCS := $(SRCS) des.c
+HWDEF += -DAPP_MULTI_MANGER_FRAME
+endif
 
 
 include ../Makedefs
