@@ -112,7 +112,7 @@ endif
 
 
 ifeq ($(APP_MULTI_MANGER_FRAME),ON)
-SRCS := $(SRCS) rc4.c
+SRCS := $(SRCS) rc4.c multimgr_device.c
 HWDEF += -DAPP_MULTI_MANGER_FRAME
 endif
 

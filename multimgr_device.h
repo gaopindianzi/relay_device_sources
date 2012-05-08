@@ -35,8 +35,13 @@ typedef struct __modbus_command_st
 {
 	unsigned char command;
 	unsigned char command_len;
-	unsigned char modbus_buffer[1];  //只想内存
+	unsigned char modbus_buffer[1];  //指向内存
 } modbus_command_st;
+
+
+extern device_info_st    multimgr_info;
+
+void StratMultiMgrDeviceThread(void);
 
 
 #endif

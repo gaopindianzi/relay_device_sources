@@ -92,6 +92,8 @@ void BspDebugLedSet(uint8_t ledmsk)
 	GpioPinSet(DEBUG_LED_PORT,DEBUG_LED2,(ledmsk&(1<<1))?0:1);
 }
 
+unsigned char gconfig = 0;
+
 uint8_t IoGetConfig(void)
 {
 	uint8_t io = 0;
@@ -107,6 +109,7 @@ uint8_t IoGetConfig(void)
 		io |= (1<<1);
 	}
 #endif
+	gconfig = io;
 	return io;
 }
 

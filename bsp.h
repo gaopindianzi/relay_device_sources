@@ -211,6 +211,7 @@
 
 extern uint16_t gwork_port;
 extern uint16_t gweb_port;
+extern unsigned char gconfig;
 
 
 uint32_t group_arry4_to_uint32(const uint8_t arry[4]);
