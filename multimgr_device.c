@@ -52,7 +52,7 @@
 #define THISINFO        1
 #define THISASSERT      1
 
-#define   DEFAULT_WORK_PORT       20191
+#define   DEFAULT_WORK_PORT       505
 
 //多管理设备信息
 device_info_st    multimgr_info;
@@ -63,7 +63,7 @@ THREAD(multimgr_thread, arg)
 {
 	int ret;
 	uint16_t  work_port;
-	unsigned char rx_buffer[32];
+	unsigned char rx_buffer[512];
 	uint16_t length = sizeof(rx_buffer);
 	UDPSOCKET * socket = NULL;
 	DEBUGMSG(THISINFO,("multimgr_thread is running...\r\n"));
@@ -95,6 +95,7 @@ THREAD(multimgr_thread, arg)
 	    //广播自己
 		//往指定主机发消息
 	    //然后等待数据，如果20s没有数据，重复广播自己，并往指定的主机发设备信息
+		length = sizeof(rx_buffer);
 		int ret = NutUdpReceiveFrom(socket,&addr,&port,rx_buffer,length,((unsigned int)multimgr_info.broadcast_time)*1000);
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));

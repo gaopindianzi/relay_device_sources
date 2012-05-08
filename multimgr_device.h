@@ -1,6 +1,12 @@
 #ifndef __MULTIMGR_DEVICE_H__
 #define __MULTIMGR_DEVICE_H__
 
+#define CMD_GET_DEVICE_INFO     0
+#define CMD_SET_DEVICE_INFO     1
+#define CMD_MODBUSPACK_SEND     2
+#define CMD_RESET_DEVICE        3
+
+
 
 typedef struct __device_info_st
 {
