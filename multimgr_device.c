@@ -46,6 +46,7 @@
 
 #include "des.h"
 #include "multimgr_device.h"
+#include "multimgr_device_dev.h"
 
 #include "debug.h"
 
@@ -58,6 +59,32 @@
 device_info_st    multimgr_info;
 //
 #define  PACKARY2_TOINT(buffer)    (((unsigned int)(buffer)[0])|(((unsigned int)(buffer)[1])<<8))
+
+
+unsigned int CRC16(unsigned char *Array,unsigned int Len)
+{
+	unsigned int  IX,IY,CRC;
+	CRC=0xFFFF;//set all 1
+	if (Len<=0) {
+		CRC = 0;
+	} else {
+		Len--;
+		for (IX=0;IX<=Len;IX++)
+		{
+			CRC=CRC^(unsigned int)(Array[IX]);
+			for(IY=0;IY<=7;IY++) {
+				if ((CRC&1)!=0) {
+					CRC=(CRC>>1)^0xA001;
+				} else {
+					CRC=CRC>>1;
+				}
+			}
+		}
+	}
+	return CRC;
+}
+
+
 
 THREAD(multimgr_thread, arg)
 {
@@ -82,7 +109,7 @@ THREAD(multimgr_thread, arg)
 	}
 	work_port = PACKARY2_TOINT(multimgr_info.work_port);
 	//创建一个UDP
-	DEBUGMSG(THISINFO,("MGR:Create UDP Port %d\r\n",work_port));
+	DEBUGMSG(THISINFO,("MGR:Create UDP Port %d,%d\r\n",work_port,sizeof(device_info_st)));
 	socket = NutUdpCreateSocket(work_port);
 	ASSERT(socket);
 	//设置
@@ -100,9 +127,16 @@ THREAD(multimgr_thread, arg)
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
 		} else if(ret == 0) {
+			unsigned int crc;
 			DEBUGMSG(THISINFO,("UDP Receive 0\r\n"));
 			//超时
 			//广播自己
+			multimgr_info.command = CMD_SET_DEVICE_INFO;
+			multimgr_info.command_len = sizeof(multimgr_info);
+			crc = CRC16(&multimgr_info,multimgr_info.command_len - 2);
+			multimgr_info.crc[0] = crc & 0xFF;
+			multimgr_info.crc[1] = crc >> 8;
+			DEBUGMSG(THISINFO,("CRC:crc[0] = 0x%X,crc[1] = 0x%X\r\n",multimgr_info.crc[0],multimgr_info.crc[1]));
 			NutUdpSendTo(socket,0xFFFFFFFFUL,work_port,(char*)&multimgr_info,sizeof(multimgr_info));
 			//
 		} else {
