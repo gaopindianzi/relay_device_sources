@@ -413,3 +413,15 @@ uint16_t BspReadEepromSerialAddress(void)
 	return tmp;
 }
 
+#ifdef APP_MULTI_MANGER_FRAME
+void BspLoadmultimgr_info(device_info_st * info)
+{
+	uint16_t offset = BSP_MULTI_MANGER_DATA_OFFSET;
+	NutNvMemLoad(offset,info,sizeof(device_info_st));
+}
+void BspSavemultimgr_info(device_info_st * info)
+{
+	uint16_t offset = BSP_MULTI_MANGER_DATA_OFFSET;
+	NutNvMemSave(offset,info,sizeof(device_info_st));
+}
+#endif

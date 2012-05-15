@@ -208,6 +208,7 @@
 #include "bin_command_def.h"
 #include "io_time_ctl.h"
 #include "cgi_thread.h"
+#include "multimgr_device_dev.h"
 
 extern uint16_t gwork_port;
 extern uint16_t gweb_port;
@@ -278,8 +279,14 @@ extern unsigned char switch_input_control_mode[32];
 #endif
 
 
-#define BSP_MAX_OFFSET              (BSP_IO_TIMING_OFFSET + 2)  //串口地址是2个字节
+#ifdef APP_MULTI_MANGER_FRAME
+#define BSP_MULTI_MANGER_DATA_OFFSET    (BSP_IO_TIMING_OFFSET + 2)  //串口地址是2个字节
+#else
+#define BSP_MULTI_MANGER_DATA_OFFSET    0  //串口地址是2个字节
+#endif
 
+
+#define BSP_MAX_OFFSET              (BSP_MULTI_MANGER_DATA_OFFSET + sizeof(device_info_st))  //在前面的基础上，增加前面的大小
 
 
 
@@ -306,6 +313,10 @@ unsigned char clock_out_clock_in2(unsigned char out);
 void bsp_input_output_init(void);
 #endif
 
+#ifdef APP_MULTI_MANGER_FRAME
+void BspLoadmultimgr_info(device_info_st * info);
+void BspSavemultimgr_info(device_info_st * info);
+#endif
 
 #endif
 

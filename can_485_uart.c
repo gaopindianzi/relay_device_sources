@@ -59,8 +59,8 @@
 
 #ifdef   APP_485_ON
 
-#define THISINFO        DEBUG_ON_INFO
-#define THISERROR       DEBUG_ON_ERROR
+#define THISINFO       0
+#define THISERROR      0
 
 
 static FILE  * stream_max485 = NULL;

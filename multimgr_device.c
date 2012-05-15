@@ -84,10 +84,12 @@ unsigned int CRC16(unsigned char *Array,unsigned int Len)
 	return CRC;
 }
 
+void dumpdata(void * _buffer,int len);
 
 
 THREAD(multimgr_thread, arg)
 {
+	unsigned int count = 0;
 	int ret;
 	uint16_t  work_port;
 	unsigned char rx_buffer[512];
@@ -96,16 +98,14 @@ THREAD(multimgr_thread, arg)
 	DEBUGMSG(THISINFO,("multimgr_thread is running...\r\n"));
     //NutThreadSetPriority(TCP_BIN_SERVER_PRI);
 	//读取参数
+	BspLoadmultimgr_info(&multimgr_info);
 	if(gconfig&0x01) {
-		//设置模式
+		//设置模式，修改工作的端口号
 		DEBUGMSG(THISINFO,("multimgr work in set mode\r\n"));
 	    multimgr_info.work_port[0] = DEFAULT_WORK_PORT&0xFF;multimgr_info.work_port[1] = DEFAULT_WORK_PORT>>8;  //505
-	    multimgr_info.broadcast_time = 1;
+	    multimgr_info.broadcast_time = 10;
 	} else {
-		//工作模式
-		DEBUGMSG(THISINFO,("multimgr work in normal mode\r\n"));
-	    multimgr_info.work_port[0] = DEFAULT_WORK_PORT&0xFF;multimgr_info.work_port[1] = DEFAULT_WORK_PORT>>8;  //505
-	    multimgr_info.broadcast_time = 1;
+		//工作模式，按照指定参数运行
 	}
 	work_port = PACKARY2_TOINT(multimgr_info.work_port);
 	//创建一个UDP
@@ -130,8 +130,13 @@ THREAD(multimgr_thread, arg)
 			unsigned int crc;
 			DEBUGMSG(THISINFO,("UDP Receive 0\r\n"));
 			//超时
+	if(0){
+		sprintf(multimgr_info.host_name,"%d,nihao,我很爱你",count++);
+		DEBUGMSG(THISINFO,("dump host name out:\r\n"));
+		dumpdata(multimgr_info.host_name,64);
+	}
 			//广播自己
-			multimgr_info.command = CMD_SET_DEVICE_INFO;
+			multimgr_info.command = CMD_GET_DEVICE_INFO;
 			multimgr_info.command_len = sizeof(multimgr_info);
 			crc = CRC16(&multimgr_info,multimgr_info.command_len - 2);
 			multimgr_info.crc[0] = crc & 0xFF;
