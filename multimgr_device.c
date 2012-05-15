@@ -51,6 +51,7 @@
 #include "debug.h"
 
 #define THISINFO        1
+#define THISERROR       1
 #define THISASSERT      1
 
 #define   DEFAULT_WORK_PORT       505
@@ -87,6 +88,81 @@ unsigned int CRC16(unsigned char *Array,unsigned int Len)
 void dumpdata(void * _buffer,int len);
 
 
+void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsigned char * rx_data,int len)
+{
+	unsigned int crc;
+	device_info_st * pst = (device_info_st *)rx_data;
+	if(pst->change_password) { //连同密码一起改变
+		DEBUGMSG(THISINFO,("Change Password.\r\n"));
+		memcpy(&multimgr_info,pst,sizeof(device_info_st));
+	} else {//除了密码之外，其他都改变
+		DEBUGMSG(THISINFO,("Not Change Password.\r\n"));
+		memcpy(pst->password,multimgr_info.password,sizeof(multimgr_info.password));
+		memcpy(&multimgr_info,pst,sizeof(device_info_st));
+	}
+	DEBUGMSG(THISINFO,("Write MultiMgr Info.\r\n"));
+	BspSavemultimgr_info(&multimgr_info);
+	//上传,应答
+	memset(pst->password,0,sizeof(pst->password));
+	pst->to_host = 1;
+	crc = CRC16(pst,sizeof(device_info_st)-2);
+	pst->crc[0] = crc & 0xFF;
+	pst->crc[1] = crc >> 8;
+	NutUdpSendTo(socket,addr,port,pst,sizeof(multimgr_info));
+}
+void broadcast_itself(UDPSOCKET * socket,unsigned char * buffer)
+{
+	unsigned int crc;
+	device_info_st * pst = (device_info_st *)buffer;
+	memcpy(pst,&multimgr_info,sizeof(multimgr_info));
+	memset(pst->password,0,sizeof(multimgr_info.password));
+	pst->change_password = 0;
+	pst->command = CMD_SET_DEVICE_INFO;
+	pst->command_len = sizeof(multimgr_info);
+	pst->to_host = 1;
+	crc = CRC16(pst,sizeof(multimgr_info) - 2);
+	pst->crc[0] = crc & 0xFF;
+	pst->crc[1] = crc >> 8;
+	DEBUGMSG(THISINFO,("Broadcast to port:%d,CRC(0x%X)\r\n",PACKARY2_TOINT(multimgr_info.work_port),crc));
+	NutUdpSendTo(socket,0xFFFFFFFFUL,PACKARY2_TOINT(multimgr_info.work_port),(char*)&multimgr_info,sizeof(multimgr_info));
+}
+
+void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,const char * rx_data,int len)
+{
+	device_info_st * pst = (device_info_st *)rx_data;
+	if(len < 3) {
+		return ;
+	}
+	if(pst->to_host) {
+		return ;
+	}
+	switch(pst->command)
+	{
+	case CMD_GET_DEVICE_INFO:
+		{
+		}
+		break;
+	case CMD_SET_DEVICE_INFO:
+		{
+			unsigned int crc;
+			if(pst->command_len != sizeof(device_info_st) || len != sizeof(device_info_st)) {
+				DEBUGMSG(THISERROR,("Prase Rx Set Device INFO Data LEN ERROR!\r\n"));
+				break;
+			}
+			crc = CRC16(pst,sizeof(device_info_st) - 2);
+			if(pst->crc[0] != (unsigned char)(crc&0xFF) || pst->crc[1] != (unsigned char)(crc>>8)) {
+				DEBUGMSG(THISERROR,("Prase Rx Data: Package CRC(0x%X) ERROR!\r\n",crc));
+				break;
+			}
+			UpdataMultiMgrDeviceInfo(socket,addr,port,rx_data,len);
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+
 THREAD(multimgr_thread, arg)
 {
 	unsigned int count = 0;
@@ -98,6 +174,7 @@ THREAD(multimgr_thread, arg)
 	DEBUGMSG(THISINFO,("multimgr_thread is running...\r\n"));
     //NutThreadSetPriority(TCP_BIN_SERVER_PRI);
 	//读取参数
+	BspLoadmultimgr_info(&multimgr_info);
 	BspLoadmultimgr_info(&multimgr_info);
 	if(gconfig&0x01) {
 		//设置模式，修改工作的端口号
@@ -123,29 +200,20 @@ THREAD(multimgr_thread, arg)
 		//往指定主机发消息
 	    //然后等待数据，如果20s没有数据，重复广播自己，并往指定的主机发设备信息
 		length = sizeof(rx_buffer);
+		DEBUGMSG(THISINFO,("UDP Start RX(timeout=%d s)\r\n",multimgr_info.broadcast_time));
 		int ret = NutUdpReceiveFrom(socket,&addr,&port,rx_buffer,length,((unsigned int)multimgr_info.broadcast_time)*1000);
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
 		} else if(ret == 0) {
-			unsigned int crc;
-			DEBUGMSG(THISINFO,("UDP Receive 0\r\n"));
+			DEBUGMSG(THISINFO,("UDP RX Timeout boadcast itself.\n"));
 			//超时
-	if(0){
-		sprintf(multimgr_info.host_name,"%d,nihao,我很爱你",count++);
-		DEBUGMSG(THISINFO,("dump host name out:\r\n"));
-		dumpdata(multimgr_info.host_name,64);
-	}
 			//广播自己
-			multimgr_info.command = CMD_GET_DEVICE_INFO;
-			multimgr_info.command_len = sizeof(multimgr_info);
-			crc = CRC16(&multimgr_info,multimgr_info.command_len - 2);
-			multimgr_info.crc[0] = crc & 0xFF;
-			multimgr_info.crc[1] = crc >> 8;
-			DEBUGMSG(THISINFO,("CRC:crc[0] = 0x%X,crc[1] = 0x%X\r\n",multimgr_info.crc[0],multimgr_info.crc[1]));
-			NutUdpSendTo(socket,0xFFFFFFFFUL,work_port,(char*)&multimgr_info,sizeof(multimgr_info));
-			//
+			broadcast_itself(socket,rx_buffer);
 		} else {
 		    DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
+			if(addr != 0xFFFFFFFFUL) { //不接受广播包
+				prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret);
+			}
 		}
 	}
 }

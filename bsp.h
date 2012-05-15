@@ -249,7 +249,7 @@ int BspAvrResetType(void);
 #define INPUT_NUM                    32
 #define OUTPUT_NUM                   32
 
-#define  SYS_TIMING_COUNT_MAX        80
+#define  SYS_TIMING_COUNT_MAX        70
 
 #define BSP_IP_ADDR_OFFSET           128
 
@@ -279,11 +279,8 @@ extern unsigned char switch_input_control_mode[32];
 #endif
 
 
-#ifdef APP_MULTI_MANGER_FRAME
-#define BSP_MULTI_MANGER_DATA_OFFSET    (BSP_IO_TIMING_OFFSET + 2)  //串口地址是2个字节
-#else
-#define BSP_MULTI_MANGER_DATA_OFFSET    0  //串口地址是2个字节
-#endif
+//串口地址总是有的
+#define BSP_MULTI_MANGER_DATA_OFFSET    (BSP_IO_SERIAL_ADDR_OFFSET + 2)  //串口地址是2个字节
 
 
 #define BSP_MAX_OFFSET              (BSP_MULTI_MANGER_DATA_OFFSET + sizeof(device_info_st))  //在前面的基础上，增加前面的大小

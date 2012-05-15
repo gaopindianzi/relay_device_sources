@@ -11,6 +11,7 @@ typedef struct __device_info_st
 {
 	unsigned char command;
 	unsigned char command_len;
+	char          to_host;
 	char          host_name[64];
 	unsigned char mac[6];
 	char          group_name1[32];
