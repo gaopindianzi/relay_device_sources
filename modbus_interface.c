@@ -183,7 +183,7 @@ int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 
 void dumpdata(void * _buffer,int len);
 
-int prase_modbus_protocol(TCPSOCKET * sock,char * pbuf,unsigned int len)
+int prase_modbus_protocol(char * pbuf,unsigned int len)
 {
 	int ret = 0; //返回应答的数据长度
 	modbus_tcp_head * phead = (modbus_tcp_head *)pbuf;
@@ -291,7 +291,7 @@ THREAD(modbus_thread, arg)
 				}
 			} else if(len > 0) {
 				DEBUGMSG(THISINFO,("\r\n---------------------Get One Tcp packet length(%d)--------------------------\r\n",len));
-				len = prase_modbus_protocol(sock,buff,len);
+				len = prase_modbus_protocol(buff,len);
 				if(len > 0) {
 					//
 					DEBUGMSG(THISINFO,("Ack Data:%d\r\n",len));

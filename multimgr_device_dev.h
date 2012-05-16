@@ -7,6 +7,7 @@
 #define CMD_RESET_DEVICE        3
 
 
+
 typedef struct __device_info_st
 {
 	unsigned char command;
@@ -18,6 +19,7 @@ typedef struct __device_info_st
 	char          group_name2[32];
 	char          change_password;
     char          password[20];   //通信用的地址
+	char          cncryption_mode;
 	unsigned char device_time[6];
 	unsigned char work_port[2];   //本地的UDP通信端口号
 	unsigned char remote_host_addr[32]; //远程主机的IP地址
@@ -41,9 +43,11 @@ typedef struct __device_info_st
 typedef struct __modbus_command_st
 {
 	unsigned char command;
-	unsigned char command_len;
-	unsigned char modbus_buffer[1];  //指向内存
+    unsigned char crc[2]; //对以下内容进行CRC校验
+    unsigned char command_len;
 } modbus_command_st;
+
+#define  GET_MODBUS_COMMAND_DATA(ptr)   ((void *)(((unsigned char *)(ptr))+sizeof(modbus_command_st)))
 
 
 #endif

@@ -138,6 +138,7 @@ extern const unsigned char app_check_data[256];
 extern volatile unsigned char addr_low;
 extern volatile unsigned char error_flag;
 extern void Load_check_dada(void);
+extern void StartModbus_Interface(void);
 
 int main(void)
 {

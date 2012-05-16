@@ -46,8 +46,4 @@ typedef struct _modbus_type_fc5_cmd
 } modbus_type_fc5_cmd;
 
 
-
-
-void StartModbus_Interface(void);
-
 #endif
