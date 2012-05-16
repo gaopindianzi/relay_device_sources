@@ -54,9 +54,12 @@
 #define THISASSERT      0
 #define DUMP_DATA_INFO  0
 
+extern void dumpdata(void * _buffer,int len);
 
-#define BITS_TO_BS(bit_num)    ((bit_num+7)/8)
+#define BITS_TO_BS(bit_num)    (((bit_num)+7)/8)
 
+extern unsigned char io_out[32/8];
+extern const uint32_t code_msk[32];
 
 int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus)
 {
@@ -73,7 +76,13 @@ int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus)
 	rc = _ioctl(_fileno(iofile), IO_OUT_GET, io_out_buffer);
 	fclose(iofile);
 	ASSERT(rc==0);
-	count = pmodbus->bit_count_h;count <<= 8; count |= pmodbus->bit_count_l;
+
+	//if(THISINFO)dumpdata(pmodbus,sizeof(modbus_type_fc1_cmd));
+	count = pmodbus->bit_count_h;
+	count <<= 8; 
+	count |= pmodbus->bit_count_l;
+	DEBUGMSG(THISINFO,("read bit counts(0x%X,0x%X->0x%X)\r\n",pmodbus->bit_count_h,pmodbus->bit_count_l,count));
+	
 	modbus_type_fc1_ack * pack = (modbus_type_fc1_ack *)pmodbus;
 	if(count) {
 		unsigned char B,b;
@@ -98,6 +107,7 @@ int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus)
 			}
 		}
 		pack->byte_count = BITS_TO_BS(count);
+		//DEBUGMSG(THISINFO,("Read bit ok,return %d bytes\r\n",pack->byte_count));
 		return 3 + pack->byte_count;  //加上头部的数据长度
 	} else {
 		DEBUGMSG(THISERROR,("pmodbus->bit_count == 0 error\r\n"));
@@ -180,6 +190,47 @@ int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 	fclose(iofile);
 	return sizeof(modbus_type_fc5_cmd);
 }
+
+
+int force_multiple_coils(unsigned char * hexbuf,unsigned int len)
+{
+	unsigned int number,i;
+	unsigned char bytes  = hexbuf[6];
+	unsigned int address = hexbuf[2];
+
+	uint32_t tmp;
+	int rc;
+	FILE * iofile = fopen("relayctl", "w+b");
+	ASSERT(iofile);
+	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
+	ASSERT(rc==0);
+	fclose(iofile);
+
+	address <<= 8;
+	address |= hexbuf[3];
+	number = hexbuf[4];
+	number <<= 8;
+	number |= hexbuf[5];
+	if(((number+7)/8) != bytes) {
+		DEBUGMSG(THISERROR,("force_multiple_coils data LEN ERROR!\r\n"));
+		return 0;//接受的数据长度不对
+	}
+	DEBUGMSG(THISINFO,("force_multiple_coils stat(%d),len(%d) bytes\r\n",address,bytes));
+	for(i=0;i<number;i++) {
+		if(address < tmp) {
+			//读取，设置
+			if(hexbuf[7+i/8]&code_msk[i%8]) {
+				//设置继电器
+				io_out[address/8] |= code_msk[address%8];
+			} else {
+				io_out[address/8] &=~code_msk[address%8];
+			}
+		}
+		address++;
+	}
+	return 6;
+}
+
 
 void dumpdata(void * _buffer,int len);
 

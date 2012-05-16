@@ -66,7 +66,7 @@ device_info_st    multimgr_info;
 extern int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus);
 extern int  ReadInputDiscretes(modbus_type_fc1_cmd * pmodbus);
 extern int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus);
-
+extern int force_multiple_coils(unsigned char * hexbuf,unsigned int len);
 
 unsigned int CRC16(unsigned char *Array,unsigned int Len)
 {
@@ -209,10 +209,11 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 							mhead->lengthl = mlen & 0xFF;
 							mhead->lengthh = mlen >> 8;
 							mst->command_len = sizeof(modbus_command_st) + sizeof(modbus_tcp_head) + mlen - 2;
-							crc = CRC16((unsigned char *)mst->command_len,mst->command_len);
+							crc = CRC16((unsigned char *)&mst->command_len,mst->command_len - 3);
 							mst->crc[0] = (unsigned char)(crc&0xFF);
 							mst->crc[1] = (unsigned char)(crc>>8);
 							DEBUGMSG(THISINFO,("ReadCoilStatus Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
+							if(THISINFO)dumpdata(mst,mst->command_len);
 							NutUdpSendTo(socket,addr,port,mst,mst->command_len);
 						} else {
 							DEBUGMSG(THISERROR,("ReadCoilStatus Ko\r\n"));
@@ -229,6 +230,31 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 						NutUdpSendTo(socket,addr,port,mst,len);
 					} else {
 						DEBUGMSG(THISERROR,("ForceSingleCoil ERROR!\r\n"));
+					}
+				}
+				break;
+			case 0x0F:
+				{
+					DEBUGMSG(THISINFO,("mosbus 0x0F func:\r\n"));
+					if(len < 8) {
+						DEBUGMSG(THISERROR,("modbus force_multiple_coils data len < 8 ERROR!\r\n"));
+					} else {
+						DEBUGMSG(THISINFO,("call force_multiple_coils.\r\n"));
+						int mlen = force_multiple_coils(GET_MODBUS_DATA(mhead),len);
+						if(mlen > 0) {
+							unsigned int crc;
+							mhead->lengthl = mlen & 0xFF;
+							mhead->lengthh = mlen >> 8;
+							mst->command_len = sizeof(modbus_command_st) + sizeof(modbus_tcp_head) + mlen - 2;
+							crc = CRC16((unsigned char *)&mst->command_len,mst->command_len - 3);
+							mst->crc[0] = (unsigned char)(crc&0xFF);
+							mst->crc[1] = (unsigned char)(crc>>8);
+							DEBUGMSG(THISINFO,("force_multiple_coils Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
+							dumpdata(mst,mst->command_len);
+							NutUdpSendTo(socket,addr,port,mst,mst->command_len);
+						} else {
+							DEBUGMSG(THISERROR,("force_multiple_coils Ko\r\n"));
+						}
 					}
 				}
 				break;
@@ -301,5 +327,5 @@ THREAD(multimgr_thread, arg)
 
 void StratMultiMgrDeviceThread(void)
 {
-	NutThreadCreate("multimgr_thread",  multimgr_thread, 0, 1024);
+	NutThreadCreate("multimgr_thread",  multimgr_thread, 0, 2024);
 }
