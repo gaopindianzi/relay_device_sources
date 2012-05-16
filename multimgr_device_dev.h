@@ -22,7 +22,7 @@ typedef struct __device_info_st
 	char          cncryption_mode;
 	unsigned char device_time[6];
 	unsigned char work_port[2];   //本地的UDP通信端口号
-	unsigned char remote_host_addr[32]; //远程主机的IP地址
+	unsigned char remote_host_addr[64]; //远程主机的IP地址
 	unsigned char remote_host_port[2]; //远程主机UDP端口号
 	//主板型号
 	unsigned char device_model;

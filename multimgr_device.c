@@ -116,7 +116,7 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 	pst->crc[1] = crc >> 8;
 	NutUdpSendTo(socket,addr,port,pst,sizeof(multimgr_info));
 }
-void broadcast_itself(UDPSOCKET * socket,unsigned char * buffer)
+void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsigned char * buffer)
 {
 	unsigned int crc;
 	device_info_st * pst = (device_info_st *)buffer;
@@ -126,13 +126,13 @@ void broadcast_itself(UDPSOCKET * socket,unsigned char * buffer)
 	pst->command = CMD_SET_DEVICE_INFO;
 	pst->command_len = sizeof(multimgr_info);
 	pst->to_host = 1;
-	pst->device_model = EXT_BOARD_IS_8CHIN_8CHOUT_V2;
+	pst->device_model = BOARD_TYPE_MODEL;
 	crc = CRC16((unsigned char *)pst,sizeof(multimgr_info) - 2);
 	pst->crc[0] = crc & 0xFF;
 	pst->crc[1] = crc >> 8;
 	DEBUGMSG(THISINFO,("Broadcast to port:%d,CRC(0x%X)\r\n",PACKARY2_TOINT(multimgr_info.work_port),crc));
 	//dumpdata((const char *)&multimgr_info,sizeof(multimgr_info));
-	NutUdpSendTo(socket,0xFFFFFFFFUL,PACKARY2_TOINT(multimgr_info.work_port),(char*)pst,sizeof(multimgr_info));
+	NutUdpSendTo(socket,host_addr,port,(char*)pst,sizeof(multimgr_info));
 }
 
 void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsigned char * rx_data,int len)
@@ -168,16 +168,16 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 	case CMD_MODBUSPACK_SEND:
 		{
 			unsigned int crc;
-			const unsigned int elen = sizeof(modbus_command_st) + sizeof(modbus_tcp_head) + sizeof(modbus_type_fc5_cmd) - 2;
+			const unsigned int elen = sizeof(modbus_command_st) + sizeof(modbus_tcp_head);
 			modbus_command_st * mst = (modbus_command_st *)pst;
 			modbus_tcp_head * mhead;
 			DEBUGMSG(THISINFO,("call CMD_MODBUSPACK_SEND.\r\n"));
-			if(len != elen) {
+			if(len < elen) {
 				DEBUGMSG(THISERROR,("Prase Rx CMD_MODBUSPACK_SEND Data LEN ERROR!\r\n"));
 				break;
 			}
 			dumpdata(mst,elen);
-			crc = CRC16((unsigned char *)&mst->command_len,elen - 3);
+			crc = CRC16((unsigned char *)&mst->command_len,len - 3);
 			if(mst->crc[0] != (unsigned char)(crc&0xFF) || mst->crc[1] != (unsigned char)(crc>>8)) {
 				DEBUGMSG(THISERROR,("Prase Rx Data CMD_MODBUSPACK_SEND: Package CRC(0x%X) != mst->crc(0x%X%X) ERROR!\r\n",
 					crc,mst->crc[0],mst->crc[1]));
@@ -236,7 +236,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 			case 0x0F:
 				{
 					DEBUGMSG(THISINFO,("mosbus 0x0F func:\r\n"));
-					if(len < 8) {
+					if(len < 17) {
 						DEBUGMSG(THISERROR,("modbus force_multiple_coils data len < 8 ERROR!\r\n"));
 					} else {
 						DEBUGMSG(THISINFO,("call force_multiple_coils.\r\n"));
@@ -285,7 +285,7 @@ THREAD(multimgr_thread, arg)
 		//设置模式，修改工作的端口号
 		DEBUGMSG(THISINFO,("multimgr work in set mode\r\n"));
 	    multimgr_info.work_port[0] = DEFAULT_WORK_PORT&0xFF;multimgr_info.work_port[1] = DEFAULT_WORK_PORT>>8;  //505
-	    multimgr_info.broadcast_time = 10;
+	    multimgr_info.broadcast_time = 3;
 		multimgr_info.cncryption_mode = 0;
 	} else {
 		//工作模式，按照指定参数运行
@@ -312,9 +312,10 @@ THREAD(multimgr_thread, arg)
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
 		} else if(ret == 0) {
 			DEBUGMSG(THISINFO,("UDP RX Timeout boadcast itself.\n"));
-			//超时
 			//广播自己
-			broadcast_itself(socket,rx_buffer);
+			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_buffer);
+			//往规定的地址发送数据
+			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_buffer);
 		} else {
 		    DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
 			if(addr != 0xFFFFFFFFUL) { //不接受广播包

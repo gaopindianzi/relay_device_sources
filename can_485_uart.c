@@ -57,6 +57,9 @@
 #include "io_out.h"
 #include "bsp.h"
 
+
+extern void dumpdata(void * _buffer,int len);
+
 #ifdef   APP_485_ON
 
 #define THISINFO       0
@@ -71,15 +74,6 @@ UDPSOCKET * socket_max485    = NULL;
 uint8_t     socket_rx_buffer[BUFFER_SIZE];
 uint8_t     rs485_rx_buffer[BUFFER_SIZE];
 
-void dumpdata(void * _buffer,int len)
-{
-	int i;
-	unsigned char * buf = (unsigned char *)_buffer;
-	if(1)for(i=0;i<len;i++) {
-		printf("%02X ",buf[i]);
-	}
-	if(1)printf("\r\n");
-}
 
 #define LITTLE_UINT16(buffer)   (((uint16_t)(*((unsigned char *)(buffer)))) + (((uint16_t)(*(((unsigned char *)(buffer))+1)))<<8))
 

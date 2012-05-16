@@ -220,6 +220,17 @@ int BspAvrResetType(void)
 	return reg;
 }
 
+void dumpdata(void * _buffer,int len)
+{
+	int i;
+	unsigned char * buf = (unsigned char *)_buffer;
+	if(1)for(i=0;i<len;i++) {
+		printf("%02X ",buf[i]);
+	}
+	if(1)printf("\r\n");
+}
+
+
 
 uint32_t toheip(u8_t ip[])
 {
