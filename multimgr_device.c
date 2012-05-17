@@ -50,6 +50,7 @@
 #include "multimgr_device.h"
 #include "multimgr_device_dev.h"
 #include "modbus_interface.h"
+#include "time_handle.h"
 
 #include "debug.h"
 
@@ -120,12 +121,59 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 	pst->crc[1] = crc >> 8;
 	NutUdpSendTo(socket,addr,port,pst,sizeof(multimgr_info));
 }
+
+#if 0
+struct _tm {
+    int tm_sec;                 /*!< \brief seconds after the minute - [0,59] */
+    int tm_min;                 /*!< \brief minutes after the hour - [0,59] */
+    int tm_hour;                /*!< \brief hours since midnight - [0,23] */
+    int tm_mday;                /*!< \brief day of the month - [1,31] */
+    int tm_mon;                 /*!< \brief months since January - [0,11] */
+    int tm_year;                /*!< \brief years since 1900 */
+    int tm_wday;                /*!< \brief days since Sunday - [0,6] */
+    int tm_yday;                /*!< \brief days since January 1 - [0,365] */
+    int tm_isdst;               /*!< \brief daylight savings time flag */
+};
+int raed_system_time_value(time_type * rio)
+{
+	NutMutexLock(&sys_time_lock);
+	rio->sec = sys_time.tm_sec;
+	rio->min = sys_time.tm_min;
+	rio->hour = sys_time.tm_hour;
+	rio->day = sys_time.tm_mday;
+	rio->mon = sys_time.tm_mon;
+	rio->year = sys_time.tm_year;
+	NutMutexUnlock(&sys_time_lock);
+	return 0;
+}
+typedef struct _time_type
+{
+	uint8_t    year;
+	uint8_t    mon;
+	uint8_t    day;
+	uint8_t    hour;
+	uint8_t    min;
+	uint8_t    sec;
+} time_type;
+#endif
+
+
 void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsigned char * buffer)
 {
 	unsigned int crc;
+	time_type time;
 	device_info_st * pst = (device_info_st *)buffer;
 	memcpy(pst,&multimgr_info,sizeof(multimgr_info));
 	memset(pst->password,0,sizeof(multimgr_info.password));
+	//设备时间
+	raed_system_time_value(&time);
+	pst->device_time[5] = time.year;
+	pst->device_time[4] = time.mon;
+	pst->device_time[3] = time.day;
+	pst->device_time[2] = time.hour;
+	pst->device_time[1] = time.min;
+	pst->device_time[0] = time.sec;
+	//
 	pst->change_password = 0;
 	pst->command = CMD_SET_DEVICE_INFO;
 	pst->command_len = sizeof(multimgr_info);
@@ -288,6 +336,8 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 				//dumpdata(rst,len);
 				break;
 			}
+			//返回报文
+			NutUdpSendTo(socket,addr,port,rst,len);
 			//可以重启系统
 			DEBUGMSG(THISINFO,("Reset System...\r\n"));
 			_ioctl(_fileno(resetfile), SET_RESET, NULL);
@@ -303,7 +353,6 @@ THREAD(multimgr_thread, arg)
 {
 	unsigned int broadcasttime;
 	char         cncryption_mode = 0;
-	unsigned int count = 0;
 	int ret;
 	uint16_t  work_port;
 	unsigned char rx_buffer[512];
