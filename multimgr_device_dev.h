@@ -22,7 +22,7 @@ typedef struct __device_info_st
 	char          cncryption_mode;
 	unsigned char device_time[6];
 	unsigned char work_port[2];   //本地的UDP通信端口号
-	unsigned char remote_host_addr[64]; //远程主机的IP地址
+	char          remote_host_addr[64]; //远程主机的IP地址
 	unsigned char remote_host_port[2]; //远程主机UDP端口号
 	//主板型号
 	unsigned char device_model;
@@ -48,6 +48,15 @@ typedef struct __modbus_command_st
 } modbus_command_st;
 
 #define  GET_MODBUS_COMMAND_DATA(ptr)   ((void *)(((unsigned char *)(ptr))+sizeof(modbus_command_st)))
+
+
+typedef struct __reset_device_st
+{
+	unsigned char command;
+	unsigned char command_len;
+	unsigned char pad[64];
+	unsigned char crc[2];
+} reset_device_st;
 
 
 #endif

@@ -30,6 +30,8 @@
 #include <pro/asp.h>
 #include <pro/discover.h>
 
+#include <dev/reset_avr.h>
+
 #include <dev/watchdog.h>
 #include <sys/timer.h>
 #include <dev/ds1307rtc.h>
@@ -56,6 +58,8 @@
 #define THISASSERT      1
 
 #define   DEFAULT_WORK_PORT       505
+
+extern FILE * resetfile;
 
 //多管理设备信息
 device_info_st    multimgr_info;
@@ -130,7 +134,7 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	crc = CRC16((unsigned char *)pst,sizeof(multimgr_info) - 2);
 	pst->crc[0] = crc & 0xFF;
 	pst->crc[1] = crc >> 8;
-	DEBUGMSG(THISINFO,("Broadcast to port:%d,CRC(0x%X)\r\n",PACKARY2_TOINT(multimgr_info.work_port),crc));
+	//DEBUGMSG(THISINFO,("Broadcast to port:%d,CRC(0x%X)\r\n",PACKARY2_TOINT(multimgr_info.work_port),crc));
 	//dumpdata((const char *)&multimgr_info,sizeof(multimgr_info));
 	NutUdpSendTo(socket,host_addr,port,(char*)pst,sizeof(multimgr_info));
 }
@@ -145,6 +149,8 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 	{
 	case CMD_GET_DEVICE_INFO:
 		{
+			DEBUGMSG(THISINFO,("broadcast_itself to get device info command.\r\n"));
+			broadcast_itself(socket,addr,port,rx_data);
 		}
 		break;
 	case CMD_SET_DEVICE_INFO:
@@ -171,12 +177,12 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 			const unsigned int elen = sizeof(modbus_command_st) + sizeof(modbus_tcp_head);
 			modbus_command_st * mst = (modbus_command_st *)pst;
 			modbus_tcp_head * mhead;
-			DEBUGMSG(THISINFO,("call CMD_MODBUSPACK_SEND.\r\n"));
+			//DEBUGMSG(THISINFO,("call CMD_MODBUSPACK_SEND.\r\n"));
 			if(len < elen) {
 				DEBUGMSG(THISERROR,("Prase Rx CMD_MODBUSPACK_SEND Data LEN ERROR!\r\n"));
 				break;
 			}
-			dumpdata(mst,elen);
+			//dumpdata(mst,elen);
 			crc = CRC16((unsigned char *)&mst->command_len,len - 3);
 			if(mst->crc[0] != (unsigned char)(crc&0xFF) || mst->crc[1] != (unsigned char)(crc>>8)) {
 				DEBUGMSG(THISERROR,("Prase Rx Data CMD_MODBUSPACK_SEND: Package CRC(0x%X) != mst->crc(0x%X%X) ERROR!\r\n",
@@ -212,8 +218,8 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 							crc = CRC16((unsigned char *)&mst->command_len,mst->command_len - 3);
 							mst->crc[0] = (unsigned char)(crc&0xFF);
 							mst->crc[1] = (unsigned char)(crc>>8);
-							DEBUGMSG(THISINFO,("ReadCoilStatus Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
-							if(THISINFO)dumpdata(mst,mst->command_len);
+							//DEBUGMSG(THISINFO,("ReadCoilStatus Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
+							//if(THISINFO)dumpdata(mst,mst->command_len);
 							NutUdpSendTo(socket,addr,port,mst,mst->command_len);
 						} else {
 							DEBUGMSG(THISERROR,("ReadCoilStatus Ko\r\n"));
@@ -235,7 +241,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 				break;
 			case 0x0F:
 				{
-					DEBUGMSG(THISINFO,("mosbus 0x0F func:\r\n"));
+					//DEBUGMSG(THISINFO,("mosbus 0x0F func:\r\n"));
 					if(len < 17) {
 						DEBUGMSG(THISERROR,("modbus force_multiple_coils data len < 8 ERROR!\r\n"));
 					} else {
@@ -250,7 +256,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 							mst->crc[0] = (unsigned char)(crc&0xFF);
 							mst->crc[1] = (unsigned char)(crc>>8);
 							DEBUGMSG(THISINFO,("force_multiple_coils Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
-							dumpdata(mst,mst->command_len);
+							//dumpdata(mst,mst->command_len);
 							NutUdpSendTo(socket,addr,port,mst,mst->command_len);
 						} else {
 							DEBUGMSG(THISERROR,("force_multiple_coils Ko\r\n"));
@@ -263,6 +269,30 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 			}
 		}
 		break;
+	case CMD_RESET_DEVICE:
+		{
+			unsigned int crc;
+			reset_device_st * rst = (reset_device_st *)rx_data;
+			if(len != sizeof(reset_device_st)) {
+				DEBUGMSG(THISINFO,("reset device data len ERROR1!\r\n"));
+				break;
+			}
+			if(rst->command_len != len) {
+				DEBUGMSG(THISINFO,("reset device data len ERROR2!\r\n"));
+				break;
+			}
+			crc = CRC16((unsigned char *)rst,sizeof(reset_device_st) - 2);
+			if(rst->crc[0] != (unsigned char)(crc&0xFF) || rst->crc[1] != (unsigned char)(crc>>8)) {
+				DEBUGMSG(THISERROR,("Prase Rx CMD_RESET_DEVICE: Package CRC(0x%X) != rst->crc(0x%X%X) ERROR!\r\n",
+					crc,rst->crc[1],rst->crc[0]));
+				//dumpdata(rst,len);
+				break;
+			}
+			//可以重启系统
+			DEBUGMSG(THISINFO,("Reset System...\r\n"));
+			_ioctl(_fileno(resetfile), SET_RESET, NULL);
+		}
+		break;
 	default:
 		break;
 	}
@@ -271,6 +301,8 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 
 THREAD(multimgr_thread, arg)
 {
+	unsigned int broadcasttime;
+	char         cncryption_mode = 0;
 	unsigned int count = 0;
 	int ret;
 	uint16_t  work_port;
@@ -284,13 +316,17 @@ THREAD(multimgr_thread, arg)
 	if(gconfig&0x01) {
 		//设置模式，修改工作的端口号
 		DEBUGMSG(THISINFO,("multimgr work in set mode\r\n"));
-	    multimgr_info.work_port[0] = DEFAULT_WORK_PORT&0xFF;multimgr_info.work_port[1] = DEFAULT_WORK_PORT>>8;  //505
-	    multimgr_info.broadcast_time = 3;
-		multimgr_info.cncryption_mode = 0;
+		work_port = DEFAULT_WORK_PORT;
+		broadcasttime = 10;
+	    cncryption_mode = 0;
 	} else {
 		//工作模式，按照指定参数运行
+		DEBUGMSG(THISINFO,("multimgr work in normal mode\r\n"));
+		work_port = PACKARY2_TOINT(multimgr_info.work_port);
+		broadcasttime = multimgr_info.broadcast_time;
+		cncryption_mode = multimgr_info.cncryption_mode;
 	}
-	work_port = PACKARY2_TOINT(multimgr_info.work_port);
+	broadcasttime = (broadcasttime < 2)?2:broadcasttime;
 	//创建一个UDP
 	DEBUGMSG(THISINFO,("MGR:Create UDP Port %d,%d\r\n",work_port,sizeof(device_info_st)));
 	socket = NutUdpCreateSocket(work_port);
@@ -299,6 +335,8 @@ THREAD(multimgr_thread, arg)
 	length = 1024;
 	ret = NutUdpSetSockOpt(socket, SO_RCVBUF, &length, sizeof(length));
 	ASSERT(ret==0);
+	NutSleep(3000);
+	goto enter;
 	while(1) {
 	    uint32_t addr = 0;
 	    uint16_t port = 0;
@@ -306,18 +344,45 @@ THREAD(multimgr_thread, arg)
 		//往指定主机发消息
 	    //然后等待数据，如果20s没有数据，重复广播自己，并往指定的主机发设备信息
 		length = sizeof(rx_buffer);
-		DEBUGMSG(THISINFO,("UDP Start RX(timeout=%d s)\r\n",multimgr_info.broadcast_time));
-		int ret = NutUdpReceiveFrom(socket,&addr,&port,rx_buffer,length,((unsigned int)multimgr_info.broadcast_time)*1000);
+		DEBUGMSG(THISINFO,("UDP Start RX(timeout=%d s)\r\n",broadcasttime));
+		int ret = NutUdpReceiveFrom(socket,&addr,&port,rx_buffer,length,((unsigned int)broadcasttime)*1000);
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
 		} else if(ret == 0) {
-			DEBUGMSG(THISINFO,("UDP RX Timeout boadcast itself.\n"));
+			//DEBUGMSG(THISINFO,("UDP RX Timeout boadcast itself.\n"));
+enter:
 			//广播自己
+			DEBUGMSG(THISINFO,("broadcast_itself to 255.255.255.255.\r\n"));
 			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_buffer);
 			//往规定的地址发送数据
-			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_buffer);
+			{
+				uint32_t remote_addr;
+				uint16_t remote_port = multimgr_info.remote_host_port[1];
+				remote_port <<= 8;
+				remote_port = multimgr_info.remote_host_port[0];
+				multimgr_info.remote_host_addr[sizeof(multimgr_info.remote_host_addr) - 1] = 0;
+
+				remote_addr = inet_addr(multimgr_info.remote_host_addr);
+				if(remote_addr == -1) {
+					if ((remote_addr = NutDnsGetHostByName((u_char*)multimgr_info.remote_host_addr)) != 0) {
+						//成功解析
+						if(THISINFO)printf("get host addr ip(%d.%d.%d.%d) ok!\r\n",
+							(uint8_t)((remote_addr>>0)&0xFF),(uint8_t)((remote_addr>>8)&0xFF),(uint8_t)((remote_addr>>16)&0xFF),(uint8_t)((remote_addr>>24)&0xFF));
+					} else {
+						//不能成功解析IP地址
+						//等待，继续解析
+						if(THISERROR)printf("Cound not prase the %s to ip addr!,try again.\r\n",multimgr_info.remote_host_addr);
+						//NutSleep(1000);
+						continue;
+					}
+				} else {
+					DEBUGMSG(THISINFO,("is ip addr,broad cast directect.\r\n"));
+				}
+				DEBUGMSG(THISINFO,("broadcast_itself to %s host.\r\n",multimgr_info.remote_host_addr));
+				broadcast_itself(socket,remote_addr,remote_port,rx_buffer);
+			}
 		} else {
-		    DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
+		    //DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
 			if(addr != 0xFFFFFFFFUL) { //不接受广播包
 				prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret);
 			}
