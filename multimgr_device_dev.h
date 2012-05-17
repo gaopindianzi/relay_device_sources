@@ -31,6 +31,7 @@ typedef struct __device_info_st
 	//更新周期
 	unsigned char broadcast_time;  //广播时间，单位s,0不广播,1以上广播
 	//本地信息
+	char          change_ipconfig;
 	unsigned char local_ip[4];
 	unsigned char net_mask[4];
 	unsigned char gateway[4];

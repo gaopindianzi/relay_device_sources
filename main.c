@@ -92,7 +92,7 @@
 #include "bsp.h"
 
 #define THISINFO       1
-#define THISERROR      DEBUG_ON_ERROR
+#define THISERROR      1
 
 
 //#define DEFINE_TEST_WDT_RESET   //是否用看门狗测试一下复位情况
@@ -129,6 +129,9 @@
 
 FILE * resetfile = NULL;
 
+//多管理设备信息
+extern device_info_st    multimgr_info;
+//
 
 
 uint32_t toheip(u8_t ip[]);
@@ -362,7 +365,7 @@ int main(void)
 
 
 	//config = 0x3;
-	
+
 	if(config & (1<<0)) {
 		u_long ip_addr;
 		u_long ip_mask;
@@ -383,6 +386,11 @@ int main(void)
 			ip_gate = inet_addr("192.168.0.1");
 			ip_dns  = inet_addr("192.168.0.1");
 		}
+
+		confnet.cdn_cip_addr = ip_addr;
+		confnet.cdn_ip_mask = ip_mask;
+		confnet.cdn_gateway = ip_gate;
+
         if (NutNetIfConfig(DEV_ETHER_NAME, de_mac, ip_addr, ip_mask) == 0) {
             /* Without DHCP we had to set the default gateway manually.*/
             if(THISINFO)puts("OK");
@@ -410,6 +418,11 @@ int main(void)
 			ip_mask = toheip(cid.netmask);
 			ip_gate = toheip(cid.gateway);
 			ip_dns  = toheip(cid.dns);
+
+			confnet.cdn_cip_addr = ip_addr;
+			confnet.cdn_ip_mask = ip_mask;
+			confnet.cdn_gateway = ip_gate;
+
 			if(THISINFO)printf("config ip address:     %s\r\n",inet_ntoa(ip_addr));
 			if(THISINFO)printf("config netmask address:%s\r\n",inet_ntoa(ip_mask));
 			if(THISINFO)printf("config gateway address:%s\r\n",inet_ntoa(ip_gate));
@@ -436,13 +449,14 @@ no_default:
 			} else {
 				//分配失败。没有网络功能
 				if(THISINFO)printf("DHCP config failed!\r\n");
+				_ioctl(_fileno(resetfile), SET_RESET, NULL);
 				for(;;);
 			}
 			goto config_finish;
 		}
 	}
 config_finish:
-    //
+    
 	NutRegisterDiscovery((u_long)-1, 0, DISF_INITAL_ANN);
 	//
 	//

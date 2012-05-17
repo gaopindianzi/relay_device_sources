@@ -71,7 +71,7 @@ device_info_st    multimgr_info;
 extern int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus);
 extern int  ReadInputDiscretes(modbus_type_fc1_cmd * pmodbus);
 extern int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus);
-extern int force_multiple_coils(unsigned char * hexbuf,unsigned int len);
+extern int  force_multiple_coils(unsigned char * hexbuf,unsigned int len);
 
 unsigned int CRC16(unsigned char *Array,unsigned int Len)
 {
@@ -103,17 +103,22 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 {
 	unsigned int crc;
 	device_info_st * pst = (device_info_st *)rx_data;
-	if(pst->change_password) { //连同密码一起改变
-		DEBUGMSG(THISINFO,("Change Password.\r\n"));
-		memcpy(&multimgr_info,pst,sizeof(device_info_st));
-	} else {//除了密码之外，其他都改变
+	device_info_st   newinfo;
+	memcpy(&newinfo,pst,sizeof(device_info_st));
+	if(!(pst->change_password)) {//不修改密码
 		DEBUGMSG(THISINFO,("Not Change Password.\r\n"));
-		memcpy(pst->password,multimgr_info.password,sizeof(multimgr_info.password));
-		memcpy(&multimgr_info,pst,sizeof(device_info_st));
+		memcpy(newinfo.password,multimgr_info.password,sizeof(multimgr_info.password));
+	}
+	if(!(pst->change_ipconfig)) { //
+		DEBUGMSG(THISINFO,("NOT change ipconfig.\r\n"));
+		memcpy(newinfo.local_ip,multimgr_info.local_ip,
+			(sizeof(multimgr_info.local_ip)+sizeof(multimgr_info.net_mask)+sizeof(multimgr_info.gateway)+
+			sizeof(multimgr_info.dns)));
 	}
 	DEBUGMSG(THISINFO,("Write MultiMgr Info.\r\n"));
-	BspSavemultimgr_info(&multimgr_info);
+	BspSavemultimgr_info(&newinfo);
 	//上传,应答
+	BspLoadmultimgr_info(pst);
 	memset(pst->password,0,sizeof(pst->password));
 	pst->to_host = 1;
 	crc = CRC16((unsigned char *)pst,sizeof(device_info_st)-2);
@@ -157,6 +162,7 @@ typedef struct _time_type
 } time_type;
 #endif
 
+extern CONFNET confnet;
 
 void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsigned char * buffer)
 {
@@ -173,6 +179,32 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	pst->device_time[2] = time.hour;
 	pst->device_time[1] = time.min;
 	pst->device_time[0] = time.sec;
+	//MAC地址
+	{
+		//u_char de_mac[] = SYS_DEFAULT_MAC;
+		memcpy(pst->mac,confnet.cdn_mac,6);
+	}
+	{//IP地址
+		pst->local_ip[0] = (unsigned char)(confnet.cdn_ip_addr >> 24);
+		pst->local_ip[1] = (unsigned char)(confnet.cdn_ip_addr >> 16);
+		pst->local_ip[2] = (unsigned char)(confnet.cdn_ip_addr >> 8);
+		pst->local_ip[3] = (unsigned char)(confnet.cdn_ip_addr >> 0);
+
+		pst->net_mask[0] = (unsigned char)(confnet.cdn_ip_mask >> 24);
+		pst->net_mask[1] = (unsigned char)(confnet.cdn_ip_mask >> 16);
+		pst->net_mask[2] = (unsigned char)(confnet.cdn_ip_mask >> 8);
+		pst->net_mask[3] = (unsigned char)(confnet.cdn_ip_mask >> 0);
+
+		pst->gateway[0] = (unsigned char)(confnet.cdn_gateway >> 24);
+		pst->gateway[1] = (unsigned char)(confnet.cdn_gateway >> 16);
+		pst->gateway[2] = (unsigned char)(confnet.cdn_gateway >> 8);
+		pst->gateway[3] = (unsigned char)(confnet.cdn_gateway >> 0);
+
+		pst->dns[0] = (unsigned char)(confnet.cdn_cip_addr >> 24);
+		pst->dns[1] = (unsigned char)(confnet.cdn_cip_addr >> 16);
+		pst->dns[2] = (unsigned char)(confnet.cdn_cip_addr >> 8);
+		pst->dns[3] = (unsigned char)(confnet.cdn_cip_addr >> 0);
+	}
 	//
 	pst->change_password = 0;
 	pst->command = CMD_SET_DEVICE_INFO;
@@ -408,7 +440,7 @@ enter:
 				uint32_t remote_addr;
 				uint16_t remote_port = multimgr_info.remote_host_port[1];
 				remote_port <<= 8;
-				remote_port = multimgr_info.remote_host_port[0];
+				remote_port += multimgr_info.remote_host_port[0];
 				multimgr_info.remote_host_addr[sizeof(multimgr_info.remote_host_addr) - 1] = 0;
 
 				remote_addr = inet_addr(multimgr_info.remote_host_addr);
@@ -427,7 +459,7 @@ enter:
 				} else {
 					DEBUGMSG(THISINFO,("is ip addr,broad cast directect.\r\n"));
 				}
-				DEBUGMSG(THISINFO,("broadcast_itself to %s host.\r\n",multimgr_info.remote_host_addr));
+				DEBUGMSG(THISINFO,("broadcast_itself to %s host:%d.\r\n",multimgr_info.remote_host_addr,remote_port));
 				broadcast_itself(socket,remote_addr,remote_port,rx_buffer);
 			}
 		} else {
