@@ -1,15 +1,10 @@
 
 #------------------------------------------------------------------------------
-#定义板的类型
+#过期的板类型
 #
 EXT_BOARD_IS_6CHIN_7CHOUT   =     1
 EXT_BOARD_IS_8CHIN_8CHOUT   =     2
 EXT_BOARD_IS_CAN485_MINIBOARD  =  3
-EXT_BOARD_IS_16CHOUT           =  4
-EXT_BOARD_IS_4CHIN_4CHOUT    =    5
-
-#一个273，面积比较小
-EXT_BOARD_IS_2CHIN_2CHOUT_BOX  =  6 
 
 #最老的，两个273   
 EXT_BOARD_IS_2CHIN_2CHOUT_V1  =   7 
@@ -17,17 +12,25 @@ EXT_BOARD_IS_2CHIN_2CHOUT_V1  =   7
 # //大板，第二版，一个273  
 EXT_BOARD_IS_2CHIN_2CHOUT_V2  =   8  
 
-# //带光耦的8路输入
+#------------------------------------------------------------------------------
+#继续维护的板类型
+#
+#一个273，面积比较小
+EXT_BOARD_IS_2CHIN_2CHOUT_BOX  =  6  
+#16路输出
+EXT_BOARD_IS_16CHOUT           =  4
+#4进4出
+EXT_BOARD_IS_4CHIN_4CHOUT    =    5
+#带光耦的8路输入，8路输出
 EXT_BOARD_IS_8CHIN_8CHOUT_V2  =   9  
 #
-#
-#定义板类型
+#定义当前需要编译的板类型
 BSP_BOARD_TYPE = $(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
 
 #
 #发布MAC地址
 #最后编码是x01\xee,双引号要用\引导
-ETHERNET_MAC = \"\x00\x06\x98\x35\x18\x08\"
+ETHERNET_MAC = \"\x00\x06\x98\x35\x18\x35\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
 HWDEF += -DBOARD_TYPE_MODEL=$(BSP_BOARD_TYPE)
 
