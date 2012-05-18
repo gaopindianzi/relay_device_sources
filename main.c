@@ -91,8 +91,8 @@
 
 #include "bsp.h"
 
-#define THISINFO       1
-#define THISERROR      1
+#define THISINFO       0
+#define THISERROR      0
 
 
 //#define DEFINE_TEST_WDT_RESET   //是否用看门狗测试一下复位情况

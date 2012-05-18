@@ -54,9 +54,9 @@
 
 #include "debug.h"
 
-#define THISINFO        1
-#define THISERROR       1
-#define THISASSERT      1
+#define THISINFO        0
+#define THISERROR       0
+#define THISASSERT      0
 
 #define   DEFAULT_WORK_PORT       505
 
@@ -171,6 +171,7 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	}
 	//
 	pst->change_password = 0;
+	pst->cncryption_mode = 0;
 	pst->command = CMD_SET_DEVICE_INFO;
 	pst->command_len = sizeof(multimgr_info);
 	pst->to_host = 1;
