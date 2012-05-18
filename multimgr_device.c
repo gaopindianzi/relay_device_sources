@@ -67,6 +67,7 @@ device_info_st    multimgr_info;
 //
 #define  PACKARY2_TOINT(buffer)    (((unsigned int)(buffer)[0])|(((unsigned int)(buffer)[1])<<8))
 
+extern uint32_t  ipconfig_dns;
 
 extern int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus);
 extern int  ReadInputDiscretes(modbus_type_fc1_cmd * pmodbus);
@@ -109,14 +110,23 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 		DEBUGMSG(THISINFO,("Not Change Password.\r\n"));
 		memcpy(newinfo.password,multimgr_info.password,sizeof(multimgr_info.password));
 	}
-	if(!(pst->change_ipconfig)) { //
-		DEBUGMSG(THISINFO,("NOT change ipconfig.\r\n"));
-		memcpy(newinfo.local_ip,multimgr_info.local_ip,
-			(sizeof(multimgr_info.local_ip)+sizeof(multimgr_info.net_mask)+sizeof(multimgr_info.gateway)+
-			sizeof(multimgr_info.dns)));
-	}
 	DEBUGMSG(THISINFO,("Write MultiMgr Info.\r\n"));
 	BspSavemultimgr_info(&newinfo);
+	//写IP地址
+	if(pst->change_ipconfig) {
+		CmdIpConfigData cid;
+		DEBUGMSG(THISINFO,("Write Ipconfig .\r\n"));
+		BspReadIpConfig(&cid);
+		memcpy(cid.ipaddr,newinfo.local_ip,sizeof(newinfo.local_ip));
+		memcpy(cid.netmask,newinfo.net_mask,sizeof(newinfo.net_mask));
+		memcpy(cid.gateway,newinfo.gateway,sizeof(newinfo.gateway));
+		memcpy(cid.dns,newinfo.dns,sizeof(newinfo.dns));
+		//为了方便，写入默认的TCP端口号
+		cid.port = 2000;
+		cid.webport = 80;
+		//
+		BspWriteIpConfig(&cid);
+	}
 	//上传,应答
 	BspLoadmultimgr_info(pst);
 	memset(pst->password,0,sizeof(pst->password));
@@ -127,41 +137,6 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 	NutUdpSendTo(socket,addr,port,pst,sizeof(multimgr_info));
 }
 
-#if 0
-struct _tm {
-    int tm_sec;                 /*!< \brief seconds after the minute - [0,59] */
-    int tm_min;                 /*!< \brief minutes after the hour - [0,59] */
-    int tm_hour;                /*!< \brief hours since midnight - [0,23] */
-    int tm_mday;                /*!< \brief day of the month - [1,31] */
-    int tm_mon;                 /*!< \brief months since January - [0,11] */
-    int tm_year;                /*!< \brief years since 1900 */
-    int tm_wday;                /*!< \brief days since Sunday - [0,6] */
-    int tm_yday;                /*!< \brief days since January 1 - [0,365] */
-    int tm_isdst;               /*!< \brief daylight savings time flag */
-};
-int raed_system_time_value(time_type * rio)
-{
-	NutMutexLock(&sys_time_lock);
-	rio->sec = sys_time.tm_sec;
-	rio->min = sys_time.tm_min;
-	rio->hour = sys_time.tm_hour;
-	rio->day = sys_time.tm_mday;
-	rio->mon = sys_time.tm_mon;
-	rio->year = sys_time.tm_year;
-	NutMutexUnlock(&sys_time_lock);
-	return 0;
-}
-typedef struct _time_type
-{
-	uint8_t    year;
-	uint8_t    mon;
-	uint8_t    day;
-	uint8_t    hour;
-	uint8_t    min;
-	uint8_t    sec;
-} time_type;
-#endif
-
 extern CONFNET confnet;
 
 void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsigned char * buffer)
@@ -169,7 +144,7 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	unsigned int crc;
 	time_type time;
 	device_info_st * pst = (device_info_st *)buffer;
-	memcpy(pst,&multimgr_info,sizeof(multimgr_info));
+	BspLoadmultimgr_info(pst);
 	memset(pst->password,0,sizeof(multimgr_info.password));
 	//设备时间
 	raed_system_time_value(&time);
@@ -184,26 +159,15 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 		//u_char de_mac[] = SYS_DEFAULT_MAC;
 		memcpy(pst->mac,confnet.cdn_mac,6);
 	}
-	{//IP地址
-		pst->local_ip[0] = (unsigned char)(confnet.cdn_ip_addr >> 24);
-		pst->local_ip[1] = (unsigned char)(confnet.cdn_ip_addr >> 16);
-		pst->local_ip[2] = (unsigned char)(confnet.cdn_ip_addr >> 8);
-		pst->local_ip[3] = (unsigned char)(confnet.cdn_ip_addr >> 0);
-
-		pst->net_mask[0] = (unsigned char)(confnet.cdn_ip_mask >> 24);
-		pst->net_mask[1] = (unsigned char)(confnet.cdn_ip_mask >> 16);
-		pst->net_mask[2] = (unsigned char)(confnet.cdn_ip_mask >> 8);
-		pst->net_mask[3] = (unsigned char)(confnet.cdn_ip_mask >> 0);
-
-		pst->gateway[0] = (unsigned char)(confnet.cdn_gateway >> 24);
-		pst->gateway[1] = (unsigned char)(confnet.cdn_gateway >> 16);
-		pst->gateway[2] = (unsigned char)(confnet.cdn_gateway >> 8);
-		pst->gateway[3] = (unsigned char)(confnet.cdn_gateway >> 0);
-
-		pst->dns[0] = (unsigned char)(confnet.cdn_cip_addr >> 24);
-		pst->dns[1] = (unsigned char)(confnet.cdn_cip_addr >> 16);
-		pst->dns[2] = (unsigned char)(confnet.cdn_cip_addr >> 8);
-		pst->dns[3] = (unsigned char)(confnet.cdn_cip_addr >> 0);
+	//读IP地址
+	{
+		CmdIpConfigData cid;
+		DEBUGMSG(THISINFO,("Write Ipconfig .\r\n"));
+		BspReadIpConfig(&cid);
+		memcpy(pst->local_ip,cid.ipaddr,sizeof(cid.ipaddr));
+		memcpy(pst->net_mask,cid.netmask,sizeof(cid.netmask));
+		memcpy(pst->gateway,cid.gateway,sizeof(cid.gateway));
+		memcpy(pst->dns,cid.dns,sizeof(cid.dns));
 	}
 	//
 	pst->change_password = 0;
@@ -219,7 +183,38 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	NutUdpSendTo(socket,host_addr,port,(char*)pst,sizeof(multimgr_info));
 }
 
-void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsigned char * rx_data,int len)
+void broadcast_to_host(UDPSOCKET * socket,unsigned char * rx_data)
+{
+			//往规定的地址发送数据
+			{
+				uint32_t remote_addr;
+				uint16_t remote_port = multimgr_info.remote_host_port[1];
+				remote_port <<= 8;
+				remote_port += multimgr_info.remote_host_port[0];
+				multimgr_info.remote_host_addr[sizeof(multimgr_info.remote_host_addr) - 1] = 0;
+
+				remote_addr = inet_addr(multimgr_info.remote_host_addr);
+				if(remote_addr == -1) {
+					if ((remote_addr = NutDnsGetHostByName((u_char*)multimgr_info.remote_host_addr)) != 0) {
+						//成功解析
+						if(THISINFO)printf("get host addr ip(%d.%d.%d.%d) ok!\r\n",
+							(uint8_t)((remote_addr>>0)&0xFF),(uint8_t)((remote_addr>>8)&0xFF),(uint8_t)((remote_addr>>16)&0xFF),(uint8_t)((remote_addr>>24)&0xFF));
+					} else {
+						//不能成功解析IP地址
+						//等待，继续解析
+						if(THISERROR)printf("Cound not prase the %s to ip addr!,try again.\r\n",multimgr_info.remote_host_addr);
+						return ;
+					}
+				} else {
+					DEBUGMSG(THISINFO,("is ip addr,broad cast directect.\r\n"));
+				}
+				DEBUGMSG(THISINFO,("broadcast_itself to %s host:%d.\r\n",multimgr_info.remote_host_addr,remote_port));
+				broadcast_itself(socket,remote_addr,remote_port,rx_data);
+			}
+}
+
+
+void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsigned char * rx_data,int len,uint16_t work_port)
 {
 	device_info_st * pst = (device_info_st *)rx_data;
 	if(len < 3) {
@@ -229,8 +224,14 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 	{
 	case CMD_GET_DEVICE_INFO:
 		{
+			//返回数据
 			DEBUGMSG(THISINFO,("broadcast_itself to get device info command.\r\n"));
 			broadcast_itself(socket,addr,port,rx_data);
+			//广播自己
+			DEBUGMSG(THISINFO,("broadcast_itself to 255.255.255.255.\r\n"));
+			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_data);
+			DEBUGMSG(THISINFO,("broadcast to internal host."));
+			broadcast_to_host(socket,rx_data);
 		}
 		break;
 	case CMD_SET_DEVICE_INFO:
@@ -387,7 +388,7 @@ THREAD(multimgr_thread, arg)
 	char         cncryption_mode = 0;
 	int ret;
 	uint16_t  work_port;
-	unsigned char rx_buffer[512];
+	unsigned char rx_buffer[300];
 	uint16_t length = sizeof(rx_buffer);
 	UDPSOCKET * socket = NULL;
 	DEBUGMSG(THISINFO,("multimgr_thread is running...\r\n"));
@@ -430,42 +431,16 @@ THREAD(multimgr_thread, arg)
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
 		} else if(ret == 0) {
-			//DEBUGMSG(THISINFO,("UDP RX Timeout boadcast itself.\n"));
 enter:
 			//广播自己
 			DEBUGMSG(THISINFO,("broadcast_itself to 255.255.255.255.\r\n"));
 			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_buffer);
-			//往规定的地址发送数据
-			{
-				uint32_t remote_addr;
-				uint16_t remote_port = multimgr_info.remote_host_port[1];
-				remote_port <<= 8;
-				remote_port += multimgr_info.remote_host_port[0];
-				multimgr_info.remote_host_addr[sizeof(multimgr_info.remote_host_addr) - 1] = 0;
-
-				remote_addr = inet_addr(multimgr_info.remote_host_addr);
-				if(remote_addr == -1) {
-					if ((remote_addr = NutDnsGetHostByName((u_char*)multimgr_info.remote_host_addr)) != 0) {
-						//成功解析
-						if(THISINFO)printf("get host addr ip(%d.%d.%d.%d) ok!\r\n",
-							(uint8_t)((remote_addr>>0)&0xFF),(uint8_t)((remote_addr>>8)&0xFF),(uint8_t)((remote_addr>>16)&0xFF),(uint8_t)((remote_addr>>24)&0xFF));
-					} else {
-						//不能成功解析IP地址
-						//等待，继续解析
-						if(THISERROR)printf("Cound not prase the %s to ip addr!,try again.\r\n",multimgr_info.remote_host_addr);
-						//NutSleep(1000);
-						continue;
-					}
-				} else {
-					DEBUGMSG(THISINFO,("is ip addr,broad cast directect.\r\n"));
-				}
-				DEBUGMSG(THISINFO,("broadcast_itself to %s host:%d.\r\n",multimgr_info.remote_host_addr,remote_port));
-				broadcast_itself(socket,remote_addr,remote_port,rx_buffer);
-			}
+			DEBUGMSG(THISINFO,("broadcast to internal host."));
+			broadcast_to_host(socket,rx_buffer);
 		} else {
 		    //DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
 			if(addr != 0xFFFFFFFFUL) { //不接受广播包
-				prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret);
+				prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret,work_port);
 			}
 		}
 	}

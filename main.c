@@ -143,6 +143,8 @@ extern volatile unsigned char error_flag;
 extern void Load_check_dada(void);
 extern void StartModbus_Interface(void);
 
+uint32_t  ipconfig_dns;
+
 int main(void)
 {
     u_char de_mac[] = SYS_DEFAULT_MAC;
@@ -390,6 +392,7 @@ int main(void)
 		confnet.cdn_cip_addr = ip_addr;
 		confnet.cdn_ip_mask = ip_mask;
 		confnet.cdn_gateway = ip_gate;
+		ipconfig_dns = ip_dns;
 
         if (NutNetIfConfig(DEV_ETHER_NAME, de_mac, ip_addr, ip_mask) == 0) {
             /* Without DHCP we had to set the default gateway manually.*/
@@ -422,6 +425,7 @@ int main(void)
 			confnet.cdn_cip_addr = ip_addr;
 			confnet.cdn_ip_mask = ip_mask;
 			confnet.cdn_gateway = ip_gate;
+			ipconfig_dns = ip_dns;
 
 			if(THISINFO)printf("config ip address:     %s\r\n",inet_ntoa(ip_addr));
 			if(THISINFO)printf("config netmask address:%s\r\n",inet_ntoa(ip_mask));
@@ -443,6 +447,7 @@ no_default:
 		//没有配置
 		//自动分配
 			gwork_port = 2000;
+			ipconfig_dns = 0;
 			if(THISINFO)printf("config ip with DHCP server.\r\n");
 			if (!NutDhcpIfConfig(DEV_ETHER_NAME, de_mac, 60000)) {
 				if(THISINFO)printf("DHCP config success,%s ready!\r\n",inet_ntoa(confnet.cdn_ip_addr));
