@@ -228,11 +228,6 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 			//返回数据
 			DEBUGMSG(THISINFO,("broadcast_itself to get device info command.\r\n"));
 			broadcast_itself(socket,addr,port,rx_data);
-			//广播自己
-			DEBUGMSG(THISINFO,("broadcast_itself to 255.255.255.255.\r\n"));
-			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_data);
-			DEBUGMSG(THISINFO,("broadcast to internal host."));
-			broadcast_to_host(socket,rx_data);
 		}
 		break;
 	case CMD_SET_DEVICE_INFO:
@@ -383,12 +378,30 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 }
 
 
+unsigned int broadcasttime = 2;
+uint16_t     work_port = DEFAULT_WORK_PORT;
+
+THREAD(multi_bcthread, arg)
+{
+	unsigned char buffer[sizeof(device_info_st) + 5];
+	UDPSOCKET * socket = (UDPSOCKET *)arg;
+	while(1) 
+	{
+		//广播自己
+		DEBUGMSG(THISINFO,("broadcast_itself to 255.255.255.255.\r\n"));
+		broadcast_itself(socket,0xFFFFFFFFUL,work_port,buffer);
+		DEBUGMSG(THISINFO,("broadcast to internal host."));
+		broadcast_to_host(socket,buffer);
+		NutSleep(broadcasttime*1000);
+	}
+}
+
 THREAD(multimgr_thread, arg)
 {
-	unsigned int broadcasttime;
+	
 	char         cncryption_mode = 0;
 	int ret;
-	uint16_t  work_port;
+	
 	unsigned char rx_buffer[300];
 	uint16_t length = sizeof(rx_buffer);
 	UDPSOCKET * socket = NULL;
@@ -410,6 +423,7 @@ THREAD(multimgr_thread, arg)
 		cncryption_mode = multimgr_info.cncryption_mode;
 	}
 	broadcasttime = (broadcasttime < 2)?2:broadcasttime;
+	broadcasttime = (broadcasttime > 60)?60:broadcasttime;
 	//创建一个UDP
 	DEBUGMSG(THISINFO,("MGR:Create UDP Port %d,%d\r\n",work_port,sizeof(device_info_st)));
 	socket = NutUdpCreateSocket(work_port);
@@ -419,7 +433,8 @@ THREAD(multimgr_thread, arg)
 	ret = NutUdpSetSockOpt(socket, SO_RCVBUF, &length, sizeof(length));
 	ASSERT(ret==0);
 	NutSleep(3000);
-	goto enter;
+	//启动广播线程
+	NutThreadCreate("multi_bcthread",  multi_bcthread, socket, 1024);
 	while(1) {
 	    uint32_t addr = 0;
 	    uint16_t port = 0;
@@ -432,12 +447,7 @@ THREAD(multimgr_thread, arg)
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
 		} else if(ret == 0) {
-enter:
-			//广播自己
-			DEBUGMSG(THISINFO,("broadcast_itself to 255.255.255.255.\r\n"));
-			broadcast_itself(socket,0xFFFFFFFFUL,work_port,rx_buffer);
-			DEBUGMSG(THISINFO,("broadcast to internal host."));
-			broadcast_to_host(socket,rx_buffer);
+			//超时
 		} else {
 		    //DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
 			if(addr != 0xFFFFFFFFUL) { //不接受广播包
@@ -450,5 +460,5 @@ enter:
 
 void StratMultiMgrDeviceThread(void)
 {
-	NutThreadCreate("multimgr_thread",  multimgr_thread, 0, 2024);
+	NutThreadCreate("multimgr_thread",  multimgr_thread, 0, 1024);
 }

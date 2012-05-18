@@ -436,3 +436,17 @@ void BspSavemultimgr_info(device_info_st * info)
 	NutNvMemSave(offset,info,sizeof(device_info_st));
 }
 #endif
+
+char BspReadFactoryOut(void)
+{
+	char ch;
+	uint16_t offset = BSP_FACTORY_OUT_OFFSET;
+	NutNvMemLoad(offset,&ch,sizeof(char));
+	return ch;
+}
+void BspWriteFactoryOut(char ch)
+{
+	uint16_t offset = BSP_FACTORY_OUT_OFFSET;
+	NutNvMemSave(offset,&ch,sizeof(char));
+}
+

@@ -282,10 +282,13 @@ extern unsigned char switch_input_control_mode[32];
 //串口地址总是有的
 #define BSP_MULTI_MANGER_DATA_OFFSET    (BSP_IO_SERIAL_ADDR_OFFSET + 2)  //串口地址是2个字节
 
+#define BSP_FACTORY_OUT_OFFSET          (BSP_MULTI_MANGER_DATA_OFFSET + sizeof(device_info_st))
 
-#define BSP_MAX_OFFSET              (BSP_MULTI_MANGER_DATA_OFFSET + sizeof(device_info_st))  //在前面的基础上，增加前面的大小
 
+#define BSP_MAX_OFFSET                  (BSP_FACTORY_OUT_OFFSET + 1)  //在前面的基础上，增加前面的大小
 
+char BspReadFactoryOut(void);
+void BspWriteFactoryOut(char ch);
 
 int BspReadWebPassword(char *);
 int BspWriteWebPassword(char *);

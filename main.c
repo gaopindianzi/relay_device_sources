@@ -157,7 +157,6 @@ int main(void)
 	u_long   wait;
 	int      direction;
 
-
 	//addr_low = (unsigned char)(((unsigned int)app_check_data)&0xFF);
 	//error_flag = 0x00;
 	IoPortInit();
@@ -177,6 +176,42 @@ int main(void)
 	NutThreadSetPriority(MAIN_RTC_TIME_PRI);
 
 	if(THISINFO)printf("\r\n\r\nOS Start %s \r\n",NutVersionString());
+
+
+	if(BspReadFactoryOut() != 0x55) {
+		CmdIpConfigData cid;
+		device_info_st  info;
+		//初始化出厂数据
+		if(THISINFO)printf("Initialize factory data......\r\n");
+		//初始化IP地址
+		cid.ipaddr[0] = 192; cid.ipaddr[1] = 168; cid.ipaddr[2] = 1; cid.ipaddr[3] = 249;
+		cid.netmask[0] = 255; cid.netmask[1] = 255; cid.netmask[2] = 255; cid.netmask[3] = 0;
+		cid.gateway[0] = 192; cid.gateway[1] = 168; cid.gateway[2] = 1; cid.gateway[3] = 1;
+		cid.dns[0] = 192; cid.dns[1] = 168; cid.dns[2] = 1; cid.dns[3] = 1;
+		cid.port = 2000;
+		cid.webport = 80;
+		BspWriteIpConfig(&cid);
+		BspWriteIpConfig(&cid);
+		//初始化端口号
+		strcpy(info.password,"admin");
+		info.cncryption_mode = 0;
+		strcpy(info.host_name,"shen zhen jingruida network");
+		strcpy(info.group_name1,"group1");
+		strcpy(info.group_name2,"group2");
+		strcpy(info.remote_host_addr,"szmcu.meibu.com");
+		info.work_port[0] = (unsigned char)(505&0xFF);
+		info.work_port[1] = (unsigned char)(505>>8);
+		info.remote_host_port[0] = (unsigned char)(505&0xFF);
+		info.remote_host_port[1] = (unsigned char)(505>>8);
+		info.broadcast_time = 2;
+		BspSavemultimgr_info(&info);
+		BspSavemultimgr_info(&info);
+		BspWriteFactoryOut(0x55);
+		BspWriteFactoryOut(0x55);
+	} else {
+		if(THISINFO)printf("not init factory data.\r\n");
+	}
+
 
 	if(0 && THISINFO) {
 		NutRegisterDevice(&devUart4851, 0, 0);
