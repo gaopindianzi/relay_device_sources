@@ -194,7 +194,7 @@ int main(void)
 		BspWriteIpConfig(&cid);
 		//³õÊ¼»¯¶Ë¿ÚºÅ
 		strcpy(info.password,"admin");
-		info.cncryption_mode = 0;
+		info.cncryption_mode = 1;
 		strcpy(info.host_name,"shen zhen jingruida network");
 		strcpy(info.group_name1,"group1");
 		strcpy(info.group_name2,"group2");

@@ -106,6 +106,8 @@ int UdpSendWithRc4Enecrytion(UDPSOCKET * sock, uint32_t addr, uint16_t port, voi
 {
 	//加密准备
 	if(cncryption_mode) {
+		//DEBUGMSG(THISINFO,("\r\nUdp Send Encryption data:\r\n"));
+		//if(THISINFO)dumpdata((const char *)data,len);
 		init_sbox();
 		rc4_encrypt(data,data,len);
 	}
@@ -418,7 +420,7 @@ THREAD(multimgr_thread, arg)
 	uint16_t length = sizeof(rx_buffer);
 	UDPSOCKET * socket = NULL;
 	DEBUGMSG(THISINFO,("multimgr_thread is running...\r\n"));
-    //NutThreadSetPriority(TCP_BIN_SERVER_PRI);
+    NutThreadSetPriority(TCP_BIN_SERVER_PRI+1);
 	//读取参数
 	BspLoadmultimgr_info(&multimgr_info);
 	if(gconfig&0x01) {
@@ -436,8 +438,11 @@ THREAD(multimgr_thread, arg)
 		if(cncryption_mode) {
 			int slen = strlen(multimgr_info.password);
 			slen = (slen > sizeof(multimgr_info.password))?sizeof(multimgr_info.password):slen;
-			multimgr_info.password[slen-1] = 0;
+			multimgr_info.password[slen] = 0;
+			DEBUGMSG(THISINFO,("Initialize kbox ...,key=%s\r\n",multimgr_info.password));
 			init_kbox((unsigned char *)(multimgr_info.password),slen);
+		} else {
+			DEBUGMSG(THISINFO,("Not encrypted mode.\r\n"));
 		}
 	}
 	broadcasttime = (broadcasttime < 2)?2:broadcasttime;

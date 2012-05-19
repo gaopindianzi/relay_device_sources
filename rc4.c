@@ -58,17 +58,6 @@
 unsigned char sbox[SBOX_LEN];
 unsigned char kbox[SBOX_LEN];
 
-
-#if 0
-
-unsigned char mydata[] = "rc4 test data!6666666666666%%%%%%%%%%%%--";
-#define       DATA_LEN   sizeof(mydata)
-unsigned char data_en[DATA_LEN];
-unsigned char data_de[DATA_LEN];
-
-
-#endif
-
 void init_kbox(unsigned char * key,unsigned int keylen)
 {
     int i, j = 0;
