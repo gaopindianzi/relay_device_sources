@@ -58,8 +58,8 @@
 unsigned char sbox[SBOX_LEN];
 unsigned char kbox[SBOX_LEN];
 
-unsigned char mykey[] = "23456";
-#define       KEY_LEN 5
+
+#if 0
 
 unsigned char mydata[] = "rc4 test data!6666666666666%%%%%%%%%%%%--";
 #define       DATA_LEN   sizeof(mydata)
@@ -67,8 +67,9 @@ unsigned char data_en[DATA_LEN];
 unsigned char data_de[DATA_LEN];
 
 
+#endif
 
-void init_kbox(void)
+void init_kbox(unsigned char * key,unsigned int keylen)
 {
     int i, j = 0;
     
@@ -76,7 +77,7 @@ void init_kbox(void)
      * 由于密钥串的长度较短，所以在初始化时是循环利用的。
      */
     for (i = 0; i < SBOX_LEN; i++)
-        kbox[i] = mykey[i % KEY_LEN];
+        kbox[i] = key[i % keylen];
 }
 
 

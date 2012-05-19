@@ -51,6 +51,7 @@
 #include "multimgr_device_dev.h"
 #include "modbus_interface.h"
 #include "time_handle.h"
+#include "rc4.h"
 
 #include "debug.h"
 
@@ -99,6 +100,19 @@ unsigned int CRC16(unsigned char *Array,unsigned int Len)
 
 void dumpdata(void * _buffer,int len);
 
+char         cncryption_mode = 0;
+
+int UdpSendWithRc4Enecrytion(UDPSOCKET * sock, uint32_t addr, uint16_t port, void *data, int len)
+{
+	//加密准备
+	if(cncryption_mode) {
+		init_sbox();
+		rc4_encrypt(data,data,len);
+	}
+	return NutUdpSendTo(sock,addr,port,data,len);
+}
+
+
 
 void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsigned char * rx_data,int len)
 {
@@ -122,8 +136,8 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 		memcpy(cid.gateway,newinfo.gateway,sizeof(newinfo.gateway));
 		memcpy(cid.dns,newinfo.dns,sizeof(newinfo.dns));
 		//为了方便，写入默认的TCP端口号
-		cid.port = 2000;
-		cid.webport = 80;
+		//cid.port = 2000;  //放在出厂初始化中处理
+		//cid.webport = 80;
 		//
 		BspWriteIpConfig(&cid);
 	}
@@ -134,7 +148,7 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 	crc = CRC16((unsigned char *)pst,sizeof(device_info_st)-2);
 	pst->crc[0] = crc & 0xFF;
 	pst->crc[1] = crc >> 8;
-	NutUdpSendTo(socket,addr,port,pst,sizeof(multimgr_info));
+	UdpSendWithRc4Enecrytion(socket,addr,port,pst,sizeof(multimgr_info));
 }
 
 extern CONFNET confnet;
@@ -171,7 +185,6 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	}
 	//
 	pst->change_password = 0;
-	pst->cncryption_mode = 0;
 	pst->command = CMD_SET_DEVICE_INFO;
 	pst->command_len = sizeof(multimgr_info);
 	pst->to_host = 1;
@@ -181,7 +194,7 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	pst->crc[1] = crc >> 8;
 	//DEBUGMSG(THISINFO,("Broadcast to port:%d,CRC(0x%X)\r\n",PACKARY2_TOINT(multimgr_info.work_port),crc));
 	//dumpdata((const char *)&multimgr_info,sizeof(multimgr_info));
-	NutUdpSendTo(socket,host_addr,port,(char*)pst,sizeof(multimgr_info));
+	UdpSendWithRc4Enecrytion(socket,host_addr,port,(char*)pst,sizeof(multimgr_info));
 }
 
 void broadcast_to_host(UDPSOCKET * socket,unsigned char * rx_data)
@@ -209,8 +222,8 @@ void broadcast_to_host(UDPSOCKET * socket,unsigned char * rx_data)
 				} else {
 					DEBUGMSG(THISINFO,("is ip addr,broad cast directect.\r\n"));
 				}
-				DEBUGMSG(THISINFO,("broadcast_itself to %s host:%d.\r\n",multimgr_info.remote_host_addr,remote_port));
-				broadcast_itself(socket,remote_addr,remote_port,rx_data);
+				DEBUGMSG(THISINFO,("broadcast_itself to %s host:%d. enecrypted.\r\n",multimgr_info.remote_host_addr,remote_port));
+				broadcast_itself(socket,remote_addr,remote_port,rx_data); //加密通信
 			}
 }
 
@@ -226,7 +239,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 	case CMD_GET_DEVICE_INFO:
 		{
 			//返回数据
-			DEBUGMSG(THISINFO,("broadcast_itself to get device info command.\r\n"));
+			DEBUGMSG(THISINFO,("broadcast_itself to get device info command,enecrypted.\r\n"));
 			broadcast_itself(socket,addr,port,rx_data);
 		}
 		break;
@@ -297,7 +310,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 							mst->crc[1] = (unsigned char)(crc>>8);
 							//DEBUGMSG(THISINFO,("ReadCoilStatus Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
 							//if(THISINFO)dumpdata(mst,mst->command_len);
-							NutUdpSendTo(socket,addr,port,mst,mst->command_len);
+							UdpSendWithRc4Enecrytion(socket,addr,port,mst,mst->command_len);
 						} else {
 							DEBUGMSG(THISERROR,("ReadCoilStatus Ko\r\n"));
 						}
@@ -310,7 +323,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 					DEBUGMSG(THISINFO,("Call ForceSingleCoil.\r\n"));
 					ret = ForceSingleCoil(GET_MODBUS_DATA(mhead));
 					if(ret > 0) {
-						NutUdpSendTo(socket,addr,port,mst,len);
+						UdpSendWithRc4Enecrytion(socket,addr,port,mst,len);
 					} else {
 						DEBUGMSG(THISERROR,("ForceSingleCoil ERROR!\r\n"));
 					}
@@ -334,7 +347,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 							mst->crc[1] = (unsigned char)(crc>>8);
 							DEBUGMSG(THISINFO,("force_multiple_coils Ok ret len(%d),CRC(0x%X)\r\n",mlen,crc));
 							//dumpdata(mst,mst->command_len);
-							NutUdpSendTo(socket,addr,port,mst,mst->command_len);
+							UdpSendWithRc4Enecrytion(socket,addr,port,mst,mst->command_len);
 						} else {
 							DEBUGMSG(THISERROR,("force_multiple_coils Ko\r\n"));
 						}
@@ -366,7 +379,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 				break;
 			}
 			//返回报文
-			NutUdpSendTo(socket,addr,port,rst,len);
+			UdpSendWithRc4Enecrytion(socket,addr,port,rst,len);
 			//可以重启系统
 			DEBUGMSG(THISINFO,("Reset System...\r\n"));
 			_ioctl(_fileno(resetfile), SET_RESET, NULL);
@@ -399,7 +412,6 @@ THREAD(multi_bcthread, arg)
 THREAD(multimgr_thread, arg)
 {
 	
-	char         cncryption_mode = 0;
 	int ret;
 	
 	unsigned char rx_buffer[300];
@@ -413,7 +425,7 @@ THREAD(multimgr_thread, arg)
 		//设置模式，修改工作的端口号
 		DEBUGMSG(THISINFO,("multimgr work in set mode\r\n"));
 		work_port = DEFAULT_WORK_PORT;
-		broadcasttime = 10;
+		broadcasttime = 2;
 	    cncryption_mode = 0;
 	} else {
 		//工作模式，按照指定参数运行
@@ -421,6 +433,12 @@ THREAD(multimgr_thread, arg)
 		work_port = PACKARY2_TOINT(multimgr_info.work_port);
 		broadcasttime = multimgr_info.broadcast_time;
 		cncryption_mode = multimgr_info.cncryption_mode;
+		if(cncryption_mode) {
+			int slen = strlen(multimgr_info.password);
+			slen = (slen > sizeof(multimgr_info.password))?sizeof(multimgr_info.password):slen;
+			multimgr_info.password[slen-1] = 0;
+			init_kbox((unsigned char *)(multimgr_info.password),slen);
+		}
 	}
 	broadcasttime = (broadcasttime < 2)?2:broadcasttime;
 	broadcasttime = (broadcasttime > 60)?60:broadcasttime;
@@ -440,7 +458,7 @@ THREAD(multimgr_thread, arg)
 	    uint16_t port = 0;
 	    //广播自己
 		//往指定主机发消息
-	    //然后等待数据，如果20s没有数据，重复广播自己，并往指定的主机发设备信息
+	    //然后等待数据
 		length = sizeof(rx_buffer);
 		DEBUGMSG(THISINFO,("UDP Start RX(timeout=%d s)\r\n",broadcasttime));
 		int ret = NutUdpReceiveFrom(socket,&addr,&port,rx_buffer,length,((unsigned int)broadcasttime)*1000);
@@ -449,14 +467,17 @@ THREAD(multimgr_thread, arg)
 		} else if(ret == 0) {
 			//超时
 		} else {
-		    //DEBUGMSG(THISINFO,("UDP Receive %d bytes\r\n",ret));
-			if(addr != 0xFFFFFFFFUL) { //不接受广播包
-				prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret,work_port);
+			if(addr == 0xFFFFFFFFUL) { //不接受广播包
+				continue;
 			}
+			if(cncryption_mode) {
+				init_sbox();
+				rc4_encrypt(rx_buffer,rx_buffer,ret);
+			}
+			prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret,work_port);
 		}
 	}
 }
-
 
 void StratMultiMgrDeviceThread(void)
 {
