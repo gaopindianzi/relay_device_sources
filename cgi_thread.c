@@ -216,7 +216,7 @@ int change_password(FILE * stream, REQUEST * req);
 
 
 
-char  gpassword[32] = {'a','d','m','i','n',0};
+char  gpassword[32];
 
 
 void StartCGIServer(void)

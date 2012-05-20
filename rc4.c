@@ -60,7 +60,7 @@ unsigned char kbox[SBOX_LEN];
 
 void init_kbox(unsigned char * key,unsigned int keylen)
 {
-    int i, j = 0;
+    int i;
     
     /*
      * 由于密钥串的长度较短，所以在初始化时是循环利用的。
@@ -100,6 +100,8 @@ void rc4_encrypt(unsigned char *source, unsigned char *target, int len)
     
     if (source == NULL || target == NULL || len <= 0)
         return;
+
+	init_sbox();
     
     while (index < len)
     {
@@ -109,8 +111,8 @@ void rc4_encrypt(unsigned char *source, unsigned char *target, int len)
         sbox[i] = sbox[j];
         sbox[j] = tmp;
         t = (sbox[i] + sbox[j]) % SBOX_LEN;
-        
-        target[index] = source[index] ^ sbox[t]; //异或运算
+        tmp = source[index] ^ sbox[t]; //异或运算
+        target[index] = tmp;
         index++;
     }
 }

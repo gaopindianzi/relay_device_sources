@@ -204,7 +204,6 @@ int force_multiple_coils(unsigned char * hexbuf,unsigned int len)
 	ASSERT(iofile);
 	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
 	ASSERT(rc==0);
-	fclose(iofile);
 
 	address <<= 8;
 	address |= hexbuf[3];
@@ -219,16 +218,20 @@ int force_multiple_coils(unsigned char * hexbuf,unsigned int len)
 	for(i=0;i<number;i++) {
 		if(address < tmp) {
 			//读取，设置
+			unsigned char buffer[2];
+			buffer[0] = (unsigned char)(address&0xFF);
+			buffer[1] = (unsigned char)(address>>8);
 			if(hexbuf[7+i/8]&code_msk[i%8]) {
 				//设置继电器
-				io_out[address/8] |= code_msk[address%8];
+				_ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
 			} else {
-				io_out[address/8] &=~code_msk[address%8];
+				_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
 			}
 		}
 		address++;
 	}
-	return 6;
+	fclose(iofile);
+	return 6;  //返回6个字节，不能动
 }
 
 

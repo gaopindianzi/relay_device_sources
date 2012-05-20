@@ -106,9 +106,6 @@ int UdpSendWithRc4Enecrytion(UDPSOCKET * sock, uint32_t addr, uint16_t port, voi
 {
 	//加密准备
 	if(cncryption_mode) {
-		//DEBUGMSG(THISINFO,("\r\nUdp Send Encryption data:\r\n"));
-		//if(THISINFO)dumpdata((const char *)data,len);
-		init_sbox();
 		rc4_encrypt(data,data,len);
 	}
 	return NutUdpSendTo(sock,addr,port,data,len);
@@ -124,7 +121,10 @@ void UpdataMultiMgrDeviceInfo(UDPSOCKET * socket,uint32_t addr,uint16_t port,uns
 	memcpy(&newinfo,pst,sizeof(device_info_st));
 	if(!(pst->change_password)) {//不修改密码
 		DEBUGMSG(THISINFO,("Not Change Password.\r\n"));
+		BspLoadmultimgr_info(&multimgr_info);
 		memcpy(newinfo.password,multimgr_info.password,sizeof(multimgr_info.password));
+	} else {
+		DEBUGMSG(THISINFO,("Change Password to %s\r\n",newinfo.password));
 	}
 	DEBUGMSG(THISINFO,("Write MultiMgr Info.\r\n"));
 	BspSavemultimgr_info(&newinfo);
@@ -407,6 +407,7 @@ THREAD(multi_bcthread, arg)
 		broadcast_itself(socket,0xFFFFFFFFUL,work_port,buffer);
 		DEBUGMSG(THISINFO,("broadcast to internal host."));
 		broadcast_to_host(socket,buffer);
+		DEBUGMSG(THISINFO,("Sleep %d S\r\n",broadcasttime));
 		NutSleep(broadcasttime*1000);
 	}
 }
@@ -465,7 +466,7 @@ THREAD(multimgr_thread, arg)
 		//往指定主机发消息
 	    //然后等待数据
 		length = sizeof(rx_buffer);
-		DEBUGMSG(THISINFO,("UDP Start RX(timeout=%d s)\r\n",broadcasttime));
+		//DEBUGMSG(THISINFO,("UDP Start RX(timeout=%d s)\r\n",broadcasttime));
 		int ret = NutUdpReceiveFrom(socket,&addr,&port,rx_buffer,length,((unsigned int)broadcasttime)*1000);
 		if(ret < 0) {
 			DEBUGMSG(THISINFO,("UDP Receive error!\r\n"));
@@ -476,7 +477,7 @@ THREAD(multimgr_thread, arg)
 				continue;
 			}
 			if(cncryption_mode) {
-				init_sbox();
+				//init_sbox();
 				rc4_encrypt(rx_buffer,rx_buffer,ret);
 			}
 			prase_multimgr_rx_data(socket,addr,port,rx_buffer,ret,work_port);

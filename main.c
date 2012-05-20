@@ -144,6 +144,7 @@ extern void Load_check_dada(void);
 extern void StartModbus_Interface(void);
 
 uint32_t  ipconfig_dns;
+extern char gpassword[32];
 
 int main(void)
 {
@@ -206,6 +207,11 @@ int main(void)
 		info.broadcast_time = 2;
 		BspSavemultimgr_info(&info);
 		BspSavemultimgr_info(&info);
+		//WEBÃÜÂë
+		strcpy(gpassword,"admin");
+		BspWriteWebPassword(gpassword);
+		BspWriteWebPassword(gpassword);
+		//±£´æ¸üÐÂ
 		BspWriteFactoryOut(0x55);
 		BspWriteFactoryOut(0x55);
 	} else {
