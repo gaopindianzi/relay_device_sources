@@ -354,7 +354,7 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 				if(THISINFO)printf("Set IO=%s\r\n",value);
 				fprintf_P(stream,PSTR("status=request ok,io="));
 				fprintf_P(stream,PSTR("%s"),value);
-				for(i=0;i<2;i++) {
+				for(i=0;i<16;i++) {
 					out <<= 1;
 				    if(value[i] == '1') {
 						out |= 0x01;
@@ -375,7 +375,7 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 				if(THISINFO)printf("Set IO=%s\r\n",value);
 				fprintf_P(stream,PSTR("status=request ok,io="));
 				fprintf_P(stream,PSTR("%s"),value);
-				for(i=0;i<2;i++) {
+				for(i=0;i<16;i++) {
 					out <<= 1;
 				    if(value[i] == '1') {
 						out |= 0x01;
