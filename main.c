@@ -195,7 +195,7 @@ int main(void)
 		BspWriteIpConfig(&cid);
 		//初始化端口号
 		strcpy(info.password,"admin");
-		info.cncryption_mode = 1;  //默认不加密
+		info.cncryption_mode = 1;
 		strcpy(info.host_name,"shen zhen jingruida network");
 		strcpy(info.group_name1,"group1");
 		strcpy(info.group_name2,"group2");
@@ -204,7 +204,7 @@ int main(void)
 		info.work_port[1] = (unsigned char)(505>>8);
 		info.remote_host_port[0] = (unsigned char)(505&0xFF);
 		info.remote_host_port[1] = (unsigned char)(505>>8);
-		info.broadcast_time = 2;
+		info.broadcast_time = BROADCASTTIME_MIN;
 		BspSavemultimgr_info(&info);
 		BspSavemultimgr_info(&info);
 		//WEB密码

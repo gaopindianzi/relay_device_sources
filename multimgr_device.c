@@ -393,7 +393,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 }
 
 
-unsigned int broadcasttime = 2;
+unsigned int broadcasttime = BROADCASTTIME_MIN;
 uint16_t     work_port = DEFAULT_WORK_PORT;
 
 THREAD(multi_bcthread, arg)
@@ -428,7 +428,7 @@ THREAD(multimgr_thread, arg)
 		//设置模式，修改工作的端口号
 		DEBUGMSG(THISINFO,("multimgr work in set mode\r\n"));
 		work_port = DEFAULT_WORK_PORT;
-		broadcasttime = 2;
+		broadcasttime = BROADCASTTIME_MIN;
 	    cncryption_mode = 0;
 	} else {
 		//工作模式，按照指定参数运行
@@ -446,8 +446,8 @@ THREAD(multimgr_thread, arg)
 			DEBUGMSG(THISINFO,("Not encrypted mode.\r\n"));
 		}
 	}
-	broadcasttime = (broadcasttime < 2)?2:broadcasttime;
-	broadcasttime = (broadcasttime > 60)?60:broadcasttime;
+	broadcasttime = (broadcasttime < BROADCASTTIME_MIN)?BROADCASTTIME_MIN:broadcasttime;
+	broadcasttime = (broadcasttime > BROADCASTTIME_MAX)?BROADCASTTIME_MAX:broadcasttime;
 	//创建一个UDP
 	DEBUGMSG(THISINFO,("MGR:Create UDP Port %d,%d\r\n",work_port,sizeof(device_info_st)));
 	socket = NutUdpCreateSocket(work_port);
