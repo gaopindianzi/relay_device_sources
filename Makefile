@@ -25,12 +25,18 @@ EXT_BOARD_IS_4CHIN_4CHOUT    =    5
 EXT_BOARD_IS_8CHIN_8CHOUT_V2  =   9  
 #
 #定义当前需要编译的板类型
-BSP_BOARD_TYPE = $(EXT_BOARD_IS_8CHIN_8CHOUT_V2)
+BSP_BOARD_TYPE = $(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
 
 #
 #发布MAC地址
-#最后编码是x01\xee,双引号要用\引导
-ETHERNET_MAC = \"\x00\x06\x98\x42\x05\x29\"
+MAC0 = 00
+MAC1 = 06
+MAC2 = 98
+MAC3 = 42
+MAC4 = 05
+MAC5 = 8B
+#以上MAC地址将自动生成一下字符串
+ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
 HWDEF += -DBOARD_TYPE_MODEL=$(BSP_BOARD_TYPE)
 
@@ -53,28 +59,28 @@ ifeq ($(BSP_BOARD_TYPE),$(EXT_BOARD_IS_2CHIN_2CHOUT_BOX))
 HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
 #SYS_HAVE_485 = ON
 WEBDIR  = web_2ch
-HEX_FILE = release_hex_2ch
+HEX_FILE = 2ch_$(MAC0)_$(MAC1)_$(MAC2)_$(MAC3)_$(MAC4)_$(MAC5)
 endif
 
 ifeq ($(BSP_BOARD_TYPE),$(EXT_BOARD_IS_4CHIN_4CHOUT))
 HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_4CHIN_4CHOUT)
 SYS_HAVE_485 = ON
 WEBDIR  = web_4ch
-HEX_FILE = release_hex_4ch
+HEX_FILE = 4ch_$(MAC0)_$(MAC1)_$(MAC2)_$(MAC3)_$(MAC4)_$(MAC5)
 endif
 
 ifeq ($(BSP_BOARD_TYPE),$(EXT_BOARD_IS_8CHIN_8CHOUT_V2))
 HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_8CHIN_8CHOUT_V2)
 SYS_HAVE_485 = ON
 WEBDIR  = web_8ch
-HEX_FILE = release_hex_8ch
+HEX_FILE = 8ch_$(MAC0)_$(MAC1)_$(MAC2)_$(MAC3)_$(MAC4)_$(MAC5)
 endif
 
 ifeq ($(BSP_BOARD_TYPE),$(EXT_BOARD_IS_16CHOUT))
 HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_16CHOUT)
 SYS_HAVE_485 = ON
 WEBDIR  = web_16ch
-HEX_FILE = release_hex_16ch
+HEX_FILE = 16ch_$(MAC0)_$(MAC1)_$(MAC2)_$(MAC3)_$(MAC4)_$(MAC5)
 endif
 
 #------------------------------------------------------------------------------
