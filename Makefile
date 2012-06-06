@@ -23,9 +23,11 @@ EXT_BOARD_IS_16CHOUT           =  4
 EXT_BOARD_IS_4CHIN_4CHOUT    =    5
 #带光耦的8路输入，8路输出
 EXT_BOARD_IS_8CHIN_8CHOUT_V2  =   9  
+#以太网服务器远程复位开关控制卡
+RELAY_PLATFORM_16CHOUT_HOST_RESET = 10
 #
 #定义当前需要编译的板类型
-BSP_BOARD_TYPE = $(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
+BSP_BOARD_TYPE = $(RELAY_PLATFORM_16CHOUT_HOST_RESET)
 
 #
 #发布MAC地址
@@ -34,7 +36,7 @@ MAC1 = 06
 MAC2 = 98
 MAC3 = 42
 MAC4 = 05
-MAC5 = 9C
+MAC5 = 8B
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
@@ -82,6 +84,14 @@ SYS_HAVE_485 = ON
 WEBDIR  = web_16ch
 HEX_FILE = 16ch_$(MAC_STRING)
 endif
+
+
+ifeq ($(BSP_BOARD_TYPE),$(RELAY_PLATFORM_16CHOUT_HOST_RESET))
+HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_16CHOUT)
+WEBDIR  = web_16ch
+HEX_FILE = 16ch_host_reset_$(MAC_STRING)
+endif
+
 
 #------------------------------------------------------------------------------
 
