@@ -65,6 +65,7 @@ uint32_t      last_input                        __attribute__ ((section (".noini
 unsigned char input_flag[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
 unsigned char input_filter[IO_IN_COUNT_MAX/8]   __attribute__ ((section (".noinit")));
 unsigned char input_hold[IO_IN_COUNT_MAX]       __attribute__ ((section (".noinit")));
+unsigned char input_all_trig_hold               __attribute__ ((section (".noinit")));
 unsigned char switch_input_control_mode[IO_IN_COUNT_MAX];
 
 
@@ -128,6 +129,8 @@ void BspIoOutInit(void)
 #endif
 	}
 #endif
+
+	input_all_trig_hold = 0;
 }
 
 uint32_t GetIoOut(void)
@@ -378,6 +381,7 @@ void io_out_ctl_thread_server(void)
 	uint16_t count = 0;
 	uint8_t  led = 0;
 	unsigned char buffer[16];
+	unsigned char io_in_8ch,in_count;
 
 	FILE * iofile = fopen("relayctl", "w+b");
 
@@ -405,23 +409,60 @@ void io_out_ctl_thread_server(void)
 #endif
 
 	_ioctl(_fileno(iofile), IO_IN_GET, buffer);
-	input_filter[0] = input_flag[0] = last_input = buffer[0];
+	io_in_8ch = input_filter[0] = input_flag[0] = last_input = buffer[0];
+	
 	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input,io_out[0]);
+
+	in_count = 0;
 
     while(1) {
 #ifdef APP_TIMEIMG_ON
 		io_scan_timing_server();
 #endif
 		if(innum) {//输入控制
+			unsigned char in;
 		    _ioctl(_fileno(iofile), IO_IN_GET, buffer);
+			in = buffer[0];
 	        GetFilterInputServer(buffer,innum);
 	        IoInputToControlIoOutServer();
+			//应客户需求，在这里添加第8路输入，全开或全关
+			if(io_in_8ch & (1<<7)) {
+				if(!(in&(1<<7))) {
+					//松开
+					if(in_count < 255) {
+						++in_count;
+					}
+					if(in_count == 100) {
+					    io_in_8ch = in;
+					}
+				} else {
+					in_count = 0;
+				}
+			} else {
+				if((in&(1<<7))) {
+					//按下
+					if(in_count < 255) {
+						++in_count;
+					}
+					if(in_count == 100) {
+						io_in_8ch = in;
+						//全部翻转
+						input_all_trig_hold = !input_all_trig_hold;
+						if(input_all_trig_hold) {
+							buffer[0] = 0x00;
+							buffer[1] = 0x00;
+						} else {
+							buffer[0] = 0xFF;
+							buffer[1] = 0xFF;
+						}
+						_ioctl(_fileno(iofile), IO_OUT_SET, buffer);
+					}
+				} else {
+					in_count = 0;
+				}
+			}
 		}
 		IoOutTimeTickUpdateServer();
-		//执行控制
-
-		//_ioctl(_fileno(iofile), IO_OUT_SET, io_out);
-
 		//等待10ms到来
 		NutSemWait(&sys_10ms_sem);
 		//
