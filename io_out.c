@@ -65,7 +65,6 @@ uint32_t      last_input                        __attribute__ ((section (".noini
 unsigned char input_flag[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
 unsigned char input_filter[IO_IN_COUNT_MAX/8]   __attribute__ ((section (".noinit")));
 unsigned char input_hold[IO_IN_COUNT_MAX]       __attribute__ ((section (".noinit")));
-unsigned char input_all_trig_hold               __attribute__ ((section (".noinit")));
 unsigned char switch_input_control_mode[IO_IN_COUNT_MAX];
 
 
@@ -130,7 +129,6 @@ void BspIoOutInit(void)
 	}
 #endif
 
-	input_all_trig_hold = 0;
 }
 
 uint32_t GetIoOut(void)
@@ -374,6 +372,33 @@ void IoOutTimeTickUpdateServer(void)
 extern void check_app(void);
 extern void check_get_mac_address(unsigned char * mac);
 
+#if  1
+//应客户需求，实现以下想法
+#if 0
+8路全开与全关功能定义：
+
+1：上位机软件对于全开和全关功能不涉及时序问题。即是说，如果上位机软件需要时序开和关，必须上位机软件实现。
+
+2：输出全开和全关对应输入端口的第7、第8路的输入控制。
+
+3：当第7路有信号输入，继电器发生时序开的功能。不管第8路是否有信号
+
+3：当第7路信号保持输入，不影响开关状态。
+
+4：当第7路信号撤去信号，不影响开关状态。
+
+5：当第8路有信号输入，继电器发生时序关的功能。不管第7路是否有信号
+
+6：当第8路信号保持输入，不影响开关状态。
+
+7：当第8路信号撤去信号，不影响开关状态。
+
+8: 当第7路第8路同时有信号输入，发生时序关功能。
+
+9：两路的输入信号延时滤波控制在100毫秒内，小于100毫秒的干扰信号，认为无信号输入。
+#endif
+#endif
+
 void io_out_ctl_thread_server(void)
 {
 	int rc = -1;
@@ -381,7 +406,9 @@ void io_out_ctl_thread_server(void)
 	uint16_t count = 0;
 	uint8_t  led = 0;
 	unsigned char buffer[16];
-	unsigned char io_in_8ch,in_count;
+	unsigned char io_in_8ch,io_in_8ch_last;
+	unsigned char timing_open_off_count = 128;  //如果小于128，则需要打开，如果大于128，则需要关闭
+	unsigned char timing_delay_count = 0;
 
 	FILE * iofile = fopen("relayctl", "w+b");
 
@@ -409,57 +436,75 @@ void io_out_ctl_thread_server(void)
 #endif
 
 	_ioctl(_fileno(iofile), IO_IN_GET, buffer);
-	io_in_8ch = input_filter[0] = input_flag[0] = last_input = buffer[0];
+	io_in_8ch_last = io_in_8ch = input_filter[0] = input_flag[0] = last_input = buffer[0];
 	
 	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input,io_out[0]);
-
-	in_count = 0;
 
     while(1) {
 #ifdef APP_TIMEIMG_ON
 		io_scan_timing_server();
 #endif
 		if(innum) {//输入控制
-			unsigned char in;
 		    _ioctl(_fileno(iofile), IO_IN_GET, buffer);
-			in = buffer[0];
+			io_in_8ch = buffer[0] & (0x3<<6);
 	        GetFilterInputServer(buffer,innum);
 	        IoInputToControlIoOutServer();
-			//应客户需求，在这里添加第8路输入，全开或全关
-			if(io_in_8ch & (1<<7)) {
-				if(!(in&(1<<7))) {
-					//松开
-					if(in_count < 255) {
-						++in_count;
+			//应客户需求，在这里指定第7路输入控制全开，第8路输入控制全关
+			if(io_in_8ch_last != io_in_8ch) {
+				unsigned char diff = io_in_8ch_last ^ io_in_8ch;
+				if(diff == (0x3<<6)) { //两个都变化
+					if(io_in_8ch & (0x3<<6)) { //两个同时又输入触发信号
+						if(timing_open_off_count <= 128) {
+						    timing_open_off_count = 128+8;
+						}
 					}
-					if(in_count == 100) {
-					    io_in_8ch = in;
+				} else if(diff & (1<<6)) { //第7路不同
+					if(io_in_8ch & (1<<6)) {  //第8路有触发信号,全开
+						if(timing_open_off_count >= 128) {
+						    timing_open_off_count = 128-8;
+						}
+					}
+				} else if(diff & (1<<7)) {//第8路不同
+					if(io_in_8ch & (1<<7)) {  //第8路有触发信号,全关
+						if(timing_open_off_count <= 128) {
+						    timing_open_off_count = 128+8;
+						}
 					}
 				} else {
-					in_count = 0;
+				}
+				io_in_8ch_last = io_in_8ch;
+			} else {
+				//无变化
+			}
+			//根据变化动作
+			if(timing_open_off_count != 128) {
+				//根据方向，动作
+				
+				if(timing_open_off_count < 128) {
+					unsigned char buffer[2];
+					unsigned char diff = 128 - timing_open_off_count - 1;
+					//时序开
+					buffer[0] = (unsigned char)(diff & 0xFF);
+					buffer[1] = (unsigned char)(diff>>8);
+					_ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
+					if(++timing_delay_count >= 50) {
+					    timing_open_off_count++;
+						timing_delay_count = 0;
+					}
+				} else if(timing_open_off_count > 128) {
+					unsigned char buffer[2];
+					unsigned char diff = timing_open_off_count - 128 - 1;
+					//时序关
+					buffer[0] = (unsigned char)(diff & 0xFF);
+					buffer[1] = (unsigned char)(diff>>8);
+					_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
+					if(++timing_delay_count >= 50) {
+					    timing_open_off_count--;
+						timing_delay_count = 0;
+					}
 				}
 			} else {
-				if((in&(1<<7))) {
-					//按下
-					if(in_count < 255) {
-						++in_count;
-					}
-					if(in_count == 100) {
-						io_in_8ch = in;
-						//全部翻转
-						input_all_trig_hold = !input_all_trig_hold;
-						if(input_all_trig_hold) {
-							buffer[0] = 0x00;
-							buffer[1] = 0x00;
-						} else {
-							buffer[0] = 0xFF;
-							buffer[1] = 0xFF;
-						}
-						_ioctl(_fileno(iofile), IO_OUT_SET, buffer);
-					}
-				} else {
-					in_count = 0;
-				}
+				timing_delay_count = 0;
 			}
 		}
 		IoOutTimeTickUpdateServer();
