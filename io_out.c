@@ -483,6 +483,7 @@ void io_out_ctl_thread_server(void)
 				if(timing_open_off_count < 128) {
 					unsigned char buffer[2];
 					unsigned char diff = 128 - timing_open_off_count - 1;
+					diff = 7 - diff;
 					//时序开
 					buffer[0] = (unsigned char)(diff & 0xFF);
 					buffer[1] = (unsigned char)(diff>>8);
@@ -494,6 +495,7 @@ void io_out_ctl_thread_server(void)
 				} else if(timing_open_off_count > 128) {
 					unsigned char buffer[2];
 					unsigned char diff = timing_open_off_count - 128 - 1;
+					diff = 7 - diff;
 					//时序关
 					buffer[0] = (unsigned char)(diff & 0xFF);
 					buffer[1] = (unsigned char)(diff>>8);
