@@ -452,6 +452,7 @@ void io_out_ctl_thread_server(void)
 	        GetFilterInputServer(buffer,innum);
 	        IoInputToControlIoOutServer();
 			//应客户需求，在这里指定第7路输入控制全开，第8路输入控制全关
+#if 0   //客户指定的时序开和时序功能，这里直接屏蔽，主线不需要这个功能。
 			if(io_in_8ch_last != io_in_8ch) {
 				unsigned char diff = io_in_8ch_last ^ io_in_8ch;
 				if(diff == (0x3<<6)) { //两个都变化
@@ -518,6 +519,7 @@ void io_out_ctl_thread_server(void)
 			} else {
 				timing_delay_count = 0;
 			}
+#endif
 		}
 		IoOutTimeTickUpdateServer();
 		//等待10ms到来
