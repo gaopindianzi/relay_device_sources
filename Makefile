@@ -36,7 +36,7 @@ MAC1 = 06
 MAC2 = 98
 MAC3 = 42
 MAC4 = 05
-MAC5 = 91
+MAC5 = 92
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
@@ -48,6 +48,7 @@ APP_CGI_ON = ON
 APP_485_ON = ON
 APP_MODBUS_TCP_ON  = ON
 APP_MULTI_MANGER_FRAME = ON
+APP_HTTP_PROTOTOL_CLIENT = ON
 #------------------------------------------------------------------------------
 
 
@@ -136,6 +137,11 @@ SRCS := $(SRCS) rc4.c multimgr_device.c
 HWDEF += -DAPP_MULTI_MANGER_FRAME
 endif
 
+ifeq ($(APP_HTTP_PROTOTOL_CLIENT),ON)
+SRCS := $(SRCS) StringPrecess.c http_request.c
+HWDEF += -DAPP_HTTP_PROTOTOL_CLIENT
+endif
+
 
 include ../Makedefs
 
@@ -148,7 +154,7 @@ TARG =  $(PROJ).hex
 DTARG := $(DTARG)
 
 all: $(OBJS) $(TARG) $(ITARG) $(DTARG)
-$(WEBFILE): $(WEBDIR)/index.html $(WEBDIR)/io_out_control.html
+$(WEBFILE): $(WEBDIR)/index.html $(WEBDIR)/io_out_control.html  $(WEBDIR)/main.html 
 	$(CRUROM) -r -o$(WEBFILE) $(WEBDIR)
 
 include ../Makerules

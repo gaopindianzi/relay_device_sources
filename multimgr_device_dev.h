@@ -61,6 +61,23 @@ typedef struct __reset_device_st
 } reset_device_st;
 
 
+
+
+//客户机版本的数据结构
+typedef struct _ethernet_relay_info
+{
+	unsigned char factory_mode;
+	char id[11];
+	unsigned char enable;
+	char host_addr[128];
+	char web_page[64];
+	unsigned int port;
+	unsigned int up_time_interval;
+} ethernet_relay_info;
+
+extern ethernet_relay_info sys_info;
+
+
 #endif
 
 

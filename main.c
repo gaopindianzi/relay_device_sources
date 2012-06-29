@@ -91,8 +91,8 @@
 
 #include "bsp.h"
 
-#define THISINFO       0
-#define THISERROR      0
+#define THISINFO       1
+#define THISERROR      1
 
 
 //#define DEFINE_TEST_WDT_RESET   //是否用看门狗测试一下复位情况
@@ -211,6 +211,14 @@ int main(void)
 		strcpy(gpassword,"admin");
 		BspWriteWebPassword(gpassword);
 		BspWriteWebPassword(gpassword);
+		//初始化HTTP_CLIENT参数
+		strcpy(sys_info.id,"201207010000");
+		strcpy(sys_info.host_addr,"pxwkoo.hk91.hqidc.net");
+		strcpy(sys_info.web_page,"relay_server.php");
+		sys_info.port = 80;
+		sys_info.up_time_interval = 10;
+		sys_info.factory_mode = 0;
+		save_relay_info(&sys_info);
 		//保存更新
 		BspWriteFactoryOut(0x55);
 		BspWriteFactoryOut(0x55);

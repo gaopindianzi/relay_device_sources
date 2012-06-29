@@ -249,7 +249,7 @@ int BspAvrResetType(void);
 #define INPUT_NUM                    32
 #define OUTPUT_NUM                   32
 
-#define  SYS_TIMING_COUNT_MAX        70
+#define  SYS_TIMING_COUNT_MAX        60
 
 #define BSP_IP_ADDR_OFFSET           128
 
@@ -285,7 +285,12 @@ extern unsigned char switch_input_control_mode[32];
 #define BSP_FACTORY_OUT_OFFSET          (BSP_MULTI_MANGER_DATA_OFFSET + sizeof(device_info_st))
 
 
-#define BSP_MAX_OFFSET                  (BSP_FACTORY_OUT_OFFSET + 1)  //在前面的基础上，增加前面的大小
+#define BSP_HTTP_CLIENT_INFO_OFFSET     (BSP_FACTORY_OUT_OFFSET + 1)
+
+#define BSP_MAX_OFFSET                  (BSP_HTTP_CLIENT_INFO_OFFSET + sizeof(ethernet_relay_info))  //在前面的基础上，增加前面的大小
+
+
+
 
 char BspReadFactoryOut(void);
 void BspWriteFactoryOut(char ch);
@@ -314,9 +319,16 @@ void bsp_input_output_init(void);
 #endif
 
 #ifdef APP_MULTI_MANGER_FRAME
-void BspLoadmultimgr_info(device_info_st * info);
-void BspSavemultimgr_info(device_info_st * info);
+extern void BspLoadmultimgr_info(device_info_st * info);
+extern void BspSavemultimgr_info(device_info_st * info);
 #endif
+
+
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+extern int load_relay_info(ethernet_relay_info * info);
+extern int save_relay_info(ethernet_relay_info * info);
+#endif
+
 
 #endif
 

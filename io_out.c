@@ -47,9 +47,11 @@
 #include "io_time_ctl.h"
 #include <dev/relaycontrol.h>
 
+#include "debug.h"
 
-#define THISINFO          DEBUG_ON_INFO
-#define THISERROR         DEBUG_ON_ERROR
+
+#define THISINFO          1
+#define THISERROR         1
 
 
 #define  IO_OUT_COUNT_MAX            32
@@ -456,18 +458,24 @@ void io_out_ctl_thread_server(void)
 					if(io_in_8ch & (0x3<<6)) { //两个同时又输入触发信号
 						if(timing_open_off_count <= 128) {
 						    timing_open_off_count = 128+8;
+							timing_delay_count = 0;
+							DEBUGMSG(THISINFO,("close2 timing all close\r\n"));
 						}
 					}
 				} else if(diff & (1<<6)) { //第7路不同
 					if(io_in_8ch & (1<<6)) {  //第8路有触发信号,全开
 						if(timing_open_off_count >= 128) {
 						    timing_open_off_count = 128-8;
+							timing_delay_count = 0;
+							DEBUGMSG(THISINFO,("open timing all open\r\n"));
 						}
 					}
 				} else if(diff & (1<<7)) {//第8路不同
 					if(io_in_8ch & (1<<7)) {  //第8路有触发信号,全关
 						if(timing_open_off_count <= 128) {
 						    timing_open_off_count = 128+8;
+							timing_delay_count = 0;
+							DEBUGMSG(THISINFO,("close timing all close\r\n"));
 						}
 					}
 				} else {
@@ -488,21 +496,23 @@ void io_out_ctl_thread_server(void)
 					buffer[0] = (unsigned char)(diff & 0xFF);
 					buffer[1] = (unsigned char)(diff>>8);
 					_ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
-					if(++timing_delay_count >= 50) {
+					if(++timing_delay_count >= 100) {
 					    timing_open_off_count++;
 						timing_delay_count = 0;
+						DEBUGMSG(THISINFO,("             set bit ...\r\n"));
 					}
 				} else if(timing_open_off_count > 128) {
 					unsigned char buffer[2];
 					unsigned char diff = timing_open_off_count - 128 - 1;
-					diff = 7 - diff;
+					//diff = 7 - diff;
 					//时序关
 					buffer[0] = (unsigned char)(diff & 0xFF);
 					buffer[1] = (unsigned char)(diff>>8);
 					_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
-					if(++timing_delay_count >= 50) {
+					if(++timing_delay_count >= 100) {
 					    timing_open_off_count--;
 						timing_delay_count = 0;
+						DEBUGMSG(THISINFO,("             clr bit ...\r\n"));
 					}
 				}
 			} else {

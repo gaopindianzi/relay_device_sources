@@ -32,6 +32,7 @@
 
 #include <dev/watchdog.h>
 #include <sys/timer.h>
+#include "StringPrecess.h"
 #include "sysdef.h"
 #include "bsp.h"
 
@@ -48,7 +49,7 @@ static FILE * iofile = NULL;
 
 #ifndef HTTPD_SERVICE_STACK
 #if defined(__AVR__)
-#define HTTPD_SERVICE_STACK ((580 * NUT_THREAD_STACK_MULT) + NUT_THREAD_STACK_ADD)
+#define HTTPD_SERVICE_STACK ((1024 * NUT_THREAD_STACK_MULT) + NUT_THREAD_STACK_ADD)
 #elif defined(__arm__)
 #define HTTPD_SERVICE_STACK ((1024 * NUT_THREAD_STACK_MULT) + NUT_THREAD_STACK_ADD)
 #else
@@ -213,6 +214,10 @@ int handle_user_quest(FILE * stream, REQUEST * req);
 int web_relay_io_ctl(FILE * stream, REQUEST * req);
 int change_password(FILE * stream, REQUEST * req);
 //int io_control_main(FILE * stream, REQUEST * req);
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+int main_ajax_handle(FILE * stream, REQUEST * req);
+#endif
+
 
 
 
@@ -237,6 +242,10 @@ void StartCGIServer(void)
 	NutRegisterCgi("io_request.cgi", web_relay_io_ctl);
 	NutRegisterCgi("user_quest.cgi", handle_user_quest);
 	NutRegisterCgi("change_password.cgi", change_password);
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+	NutRegisterCgi("main_ajax_handle.cgi", main_ajax_handle);
+#endif
+	
 
     for (i = 1; i <= 4; i++) {
         char thname[] = "httpd0";
@@ -475,6 +484,7 @@ int handle_user_quest(FILE * stream, REQUEST * req)
 				if(strcmp(value,gpassword) == 0) {
 					fputs_P(PSTR("登陆成功<br />"),stream);
 					fputs_P(PSTR("<a href=""/io_out_control.html"">进入控制界面</a><br /><br />"),stream);
+					fputs_P(PSTR("<a href=""/main.html"">进入管理界面</a><br /><br />"),stream);
 					fputs_P(PSTR("修改密码<br /><br />"),stream);
 					fputs_P(form_change_password,stream);
 					fputs_P(PSTR("<a href=""/index.html"">返回登陆界面</a><br />"),stream);
@@ -875,6 +885,109 @@ int io_control_main(FILE * stream, REQUEST * req)
 		(io&(1UL<<15))?"checked":"");
     fflush(stream);
 
+    return 0;
+}
+
+#endif
+
+
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+
+ethernet_relay_info   sys_info;
+
+int main_ajax_handle(FILE * stream, REQUEST * req)
+{
+	static prog_char head[] = "<!DOCTYPE html PUBLIC ""-//W3C//DTD XHTML 1.0 Transitional//EN"" ""http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"">"
+"<html xmlns=""http://www.w3.org/1999/xhtml"">"
+"<head>"
+"<meta http-equiv=""Content-Type"" content=""text/html; charset=gb2312"" />"
+"<title>remote_relay_manager</title>"
+"</head>"
+"<body>";
+    static prog_char foot[] = "</BODY></HTML>";
+    /* These useful API calls create a HTTP response for us. */
+    NutHttpSendHeaderTop(stream, req, 200, "Ok");
+    NutHttpSendHeaderBottom(stream, req, html_mt, -1);
+	//CSS定义区
+	//
+	fputs_P(head,stream);
+	//用户请求执行区
+	if(THISINFO)printf("HTTP:main_ajax_handle.cgi\r\n");
+	if (req->req_query) { //如果有请求
+        char *name;
+        char *value;
+        int i;
+        int count;
+		device_info_st   devinfo;
+
+        count = NutHttpGetParameterCount(req);
+        /* Extract count parameters. */
+		//fputs_P(PSTR("以下是AJAX请求参数<br/>"),stream);
+		if(THISINFO)printf("HTTP:Request count=%d\r\n",count);
+
+		BspLoadmultimgr_info(&devinfo);
+		load_relay_info(&sys_info);
+
+        for (i = 0; i < count; i++) {
+            name = NutHttpGetParameterName(req, i);
+            value = NutHttpGetParameterValue(req, i);
+			if(THISINFO)printf("%d:%s=%s\r\n",i,name,value);
+			if(strcmp(name,"name") == 0) {//设置名字
+				if(strlen(value) > sizeof(devinfo.host_name)-1) value[sizeof(devinfo.host_name)-1] = '\0';
+				strcpy(devinfo.host_name,value);
+			}
+			if(strcmp(name,"id") == 0) {//设置ID
+				if(strlen(value) > sizeof(sys_info.id)-1) value[sizeof(sys_info.id)-1] = '\0';
+				strcpy(sys_info.id,value);
+			}
+			if(strcmp(name,"en") == 0) {//设置enable
+				if(strcmp(value,"t") == 0) {
+					sys_info.enable = 1;
+				} else {
+					sys_info.enable = 0;
+				}
+			}
+			if(strcmp(name,"addr") == 0) {//设置host_addr
+				if(strlen(value) > sizeof(sys_info.host_addr)-1) value[sizeof(sys_info.host_addr)-1] = '\0';
+				strcpy(sys_info.host_addr,value);
+			}
+			if(strcmp(name,"page") == 0) {//设置名字
+				if(strlen(value) > sizeof(sys_info.web_page)-1) value[sizeof(sys_info.web_page)-1] = '\0';
+				strcpy(sys_info.web_page,value);
+			}
+			if(strcmp(name,"port") == 0) {//设置端口号
+				sys_info.port = StringDecToValueInt(value);
+			}
+			if(strcmp(name,"upt") == 0) {//设置名字
+				sys_info.up_time_interval = StringDecToValueInt(value);
+			}
+		}
+		save_relay_info(&sys_info);
+		BspSavemultimgr_info(&devinfo);
+		//输出返回信息
+		fputs_P(PSTR("b=b"),stream);
+		fprintf_P(stream,PSTR("&name=%s"),devinfo.host_name);
+		fprintf_P(stream,PSTR("&id=%s"),sys_info.id);
+		fprintf_P(stream,PSTR("&en=%s"),sys_info.enable?"t":"f");
+		fprintf_P(stream,PSTR("&addr=%s"),sys_info.host_addr);
+		fprintf_P(stream,PSTR("&page=%s"),sys_info.web_page);
+		{
+			char buffer[8];
+		    ValueIntToStringDec(buffer,sys_info.port);
+			fprintf_P(stream,PSTR("&port=%s"),buffer);
+		    ValueIntToStringDec(buffer,sys_info.up_time_interval);
+			fprintf_P(stream,PSTR("&upt=%s"),buffer);
+		}
+		//fprintf_P(stream,PSTR("&pwd=%s"),sys_info.remote_password);
+		fputs_P(PSTR("&e=e"),stream);
+	} else { //没有用户请求
+		if(THISINFO)printf("No Request.\r\n");
+		fputs_P(PSTR("b=b"),stream);
+		fputs_P(PSTR("&e=e"),stream);
+	}
+    /* Send HTML footer and flush output buffer. */
+    fputs_P(foot, stream);
+    fflush(stream);
     return 0;
 }
 
