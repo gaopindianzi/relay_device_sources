@@ -28,7 +28,6 @@
 #include "multimgr_device_dev.h"
 
 //#include "bsp.h"
-
 #include "debug.h"
 
 #define THISINFO          1
@@ -39,8 +38,8 @@
 #define HTTP_DATA_PRINT   1
 
 
-char http_buffer[1*1024];
-char buffer[512];
+char http_buffer[2024];
+char buffer[64];
 unsigned int rx_index = 0;
 
 static FILE  * iofile        = NULL;
@@ -209,7 +208,7 @@ THREAD(tcp_client, arg)
 	ASSERT(iofile);
 
 
-    NutThreadSetPriority(128);
+    NutThreadSetPriority(102);
 
 
 	//获取复位信息
@@ -327,5 +326,5 @@ THREAD(tcp_client, arg)
 
 void StartHttpRequestThread(void)
 {
-	NutThreadCreate("tcp_client", tcp_client, 0, 1024);
+	NutThreadCreate("tcp_client", tcp_client, 0, 512);
 }

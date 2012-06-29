@@ -36,8 +36,8 @@
 #include "sysdef.h"
 #include "bsp.h"
 
-#define THISINFO           DEBUG_ON_INFO
-#define THISERROR          DEBUG_ON_ERROR
+#define THISINFO           1
+#define THISERROR          1
 
 static FILE * iofile = NULL;
 
@@ -46,10 +46,12 @@ static FILE * iofile = NULL;
 #include <net/netdebug.h>
 #endif
 
+#include "debug.h"
+
 
 #ifndef HTTPD_SERVICE_STACK
 #if defined(__AVR__)
-#define HTTPD_SERVICE_STACK ((1024 * NUT_THREAD_STACK_MULT) + NUT_THREAD_STACK_ADD)
+#define HTTPD_SERVICE_STACK ((512 * NUT_THREAD_STACK_MULT) + NUT_THREAD_STACK_ADD)
 #elif defined(__arm__)
 #define HTTPD_SERVICE_STACK ((1024 * NUT_THREAD_STACK_MULT) + NUT_THREAD_STACK_ADD)
 #else
@@ -143,7 +145,9 @@ THREAD(Service, arg)
     u_char id = (u_char) ((uptr_t) arg);
 
 
-	NutThreadSetPriority(TCP_BIN_SERVER_PRI - 1);
+	DEBUGMSG(THISINFO,("Http Server start...\r\n"));
+
+	NutThreadSetPriority(HTTP_SERVER_PRI);
     /*
      * Now loop endless for connections.
      */
@@ -168,6 +172,8 @@ THREAD(Service, arg)
 #else
         if(THISINFO)printf("[%u] Connected, %lu bytes free\n", id, NutHeapAvailable());
 #endif
+
+		DEBUGMSG(THISINFO,("Http Server Request...\r\n"));
 
         /*
          * Wait until at least 8 kByte of free RAM is available. This will
@@ -247,7 +253,7 @@ void StartCGIServer(void)
 #endif
 	
 
-    for (i = 1; i <= 4; i++) {
+    for (i = 1; i <= 1; i++) {
         char thname[] = "httpd0";
 
         thname[5] = '0' + i;

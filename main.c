@@ -91,8 +91,8 @@
 
 #include "bsp.h"
 
-#define THISINFO       1
-#define THISERROR      1
+#define THISINFO       0
+#define THISERROR      0
 
 
 //#define DEFINE_TEST_WDT_RESET   //是否用看门狗测试一下复位情况
@@ -132,6 +132,9 @@ FILE * resetfile = NULL;
 //多管理设备信息
 extern device_info_st    multimgr_info;
 //
+
+
+
 
 
 uint32_t toheip(u8_t ip[]);
@@ -212,11 +215,11 @@ int main(void)
 		BspWriteWebPassword(gpassword);
 		BspWriteWebPassword(gpassword);
 		//初始化HTTP_CLIENT参数
-		strcpy(sys_info.id,"201207010000");
+		strcpy(sys_info.id,"20120701000");
 		strcpy(sys_info.host_addr,"pxwkoo.hk91.hqidc.net");
 		strcpy(sys_info.web_page,"relay_server.php");
 		sys_info.port = 80;
-		sys_info.up_time_interval = 10;
+		sys_info.up_time_interval = BROADCASTTIME_MIN;
 		sys_info.factory_mode = 0;
 		save_relay_info(&sys_info);
 		//保存更新
@@ -532,10 +535,12 @@ config_finish:
 	StratMultiMgrDeviceThread();
 #endif
 
-
-
 #ifdef APP_MODBUS_TCP_ON
 	StartModbus_Interface();
+#endif
+
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+	StartHttpRequestThread();
 #endif
 
 	while(0) {

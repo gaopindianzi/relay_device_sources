@@ -369,7 +369,7 @@ void StartCAN_485Srever(void)
     _ioctl(_fileno(stream_max485), UART_SETSPEED, &baud);
 	baud = 5; //10ms
 	_ioctl(_fileno(stream_max485), UART_SETREADTIMEOUT, &baud);
-    NutThreadCreate("thread_can485_read",  thread_can485_read, 0, 1024);
+    NutThreadCreate("thread_can485_read",  thread_can485_read, 0, 512);
 }
 
 

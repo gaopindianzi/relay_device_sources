@@ -551,7 +551,7 @@ THREAD(io_out_ctl_thread, arg)
 
 void StartIoOutControlSrever(void)
 {
-    NutThreadCreate("io_out_ctl_thread",  io_out_ctl_thread, 0, 1024);
+    NutThreadCreate("io_out_ctl_thread",  io_out_ctl_thread, 0, 512);
 }
 
 
