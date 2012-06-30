@@ -88,11 +88,14 @@
 #include <dev/usartavr485.h>
 #include <cfg/platform_def.h>
 #include "multimgr_device.h"
-
+#include "sys_var.h"
 #include "bsp.h"
 
-#define THISINFO       0
-#define THISERROR      0
+#include "debug.h"
+
+#define THISINFO       1
+#define THISERROR      1
+#define THISASSERT     1
 
 
 //#define DEFINE_TEST_WDT_RESET   //是否用看门狗测试一下复位情况
@@ -127,11 +130,12 @@
 
 
 
-FILE * resetfile = NULL;
-
 //多管理设备信息
 extern device_info_st    multimgr_info;
 //
+
+//系统文件接口
+sys_varient_type  sys_varient;
 
 
 
@@ -255,7 +259,8 @@ int main(void)
 	NutRegisterDevice(&devAvrResetCtl, 0, 0);
 	//注册输入输出接口驱动
 	NutRegisterDevice(&devRelayInputOutput, 0, 0);
-
+	//注册485接口
+	NutRegisterDevice(&devUart4851, 0, 0);
 
 	
 	count = 0x1234;
@@ -315,10 +320,17 @@ int main(void)
 	}
 
 
+	{
+		//打开文件
+		sys_varient.iofile = fopen("relayctl", "w+b");
+		sys_varient.resetfile = fopen("resetctl", "w+b");
+		sys_varient.stream_max485 = fopen("uart4851", "w+b");
+		ASSERT(sys_varient.iofile && sys_varient.resetfile && sys_varient.stream_max485);
+	}
+
+
 	{ //获取复位信息
-	    resetfile = fopen("resetctl", "w+b");
-		_ioctl(_fileno(resetfile), GET_RESET_TYPE, &reset_type);
-		//fclose(resetfile);
+		_ioctl(_fileno(sys_varient.resetfile), GET_RESET_TYPE, &reset_type);
 	}
 
 
@@ -506,7 +518,7 @@ no_default:
 			} else {
 				//分配失败。没有网络功能
 				if(THISINFO)printf("DHCP config failed!\r\n");
-				_ioctl(_fileno(resetfile), SET_RESET, NULL);
+				_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 				for(;;);
 			}
 			goto config_finish;
@@ -522,6 +534,7 @@ config_finish:
 	NutRegisterDevice(&MY_FSDEV, 0, 0);
 #endif
 	StartBinCmdServer();
+
 #ifdef USE_AUTO_CONFIG
 	StartUdpCmdServer();
 #endif
@@ -615,7 +628,7 @@ config_finish:
 		if(++baud == 30*100) {
 			//启动
 			if(1)printf("reset system ...\r\n");
-			_ioctl(_fileno(resetfile), SET_RESET, NULL);
+			_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 		}
 #endif
 	}

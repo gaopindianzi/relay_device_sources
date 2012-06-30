@@ -46,7 +46,7 @@
 #include "time_handle.h"
 #include "io_time_ctl.h"
 #include <dev/relaycontrol.h>
-
+#include "sys_var.h"
 #include "debug.h"
 
 
@@ -412,15 +412,8 @@ void io_out_ctl_thread_server(void)
 	unsigned char timing_open_off_count = 128;  //如果小于128，则需要打开，如果大于128，则需要关闭
 	unsigned char timing_delay_count = 0;
 
-	FILE * iofile = fopen("relayctl", "w+b");
 
-	if(iofile) {
-		if(THISINFO)printf("fopen relayctl succ.\r\n");
-	} else {
-		if(THISINFO)printf("fopen relayctl failed.\r\n");
-	}
-
-	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &outnum);
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &outnum);
 
 	if(!rc) {
 		if(THISINFO)printf("fopen relayctl succ.\r\n");
@@ -429,7 +422,7 @@ void io_out_ctl_thread_server(void)
 	}
 
 
-	_ioctl(_fileno(iofile), GET_IN_NUM, &innum);
+	_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &innum);
 	
 	if(THISINFO)printf("IOCTL:inputnum(%d),outputnum(%d).\r\n",(int)innum,(int)outnum);
 
@@ -437,7 +430,7 @@ void io_out_ctl_thread_server(void)
 	timing_init();
 #endif
 
-	_ioctl(_fileno(iofile), IO_IN_GET, buffer);
+	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
 	io_in_8ch_last = io_in_8ch = input_filter[0] = input_flag[0] = last_input = buffer[0];
 	
 	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input,io_out[0]);
@@ -447,7 +440,7 @@ void io_out_ctl_thread_server(void)
 		io_scan_timing_server();
 #endif
 		if(innum) {//输入控制
-		    _ioctl(_fileno(iofile), IO_IN_GET, buffer);
+		    _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
 			io_in_8ch = buffer[0] & (0x3<<6);
 	        GetFilterInputServer(buffer,innum);
 	        IoInputToControlIoOutServer();
@@ -496,7 +489,7 @@ void io_out_ctl_thread_server(void)
 					//时序开
 					buffer[0] = (unsigned char)(diff & 0xFF);
 					buffer[1] = (unsigned char)(diff>>8);
-					_ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
+					_ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buffer);
 					if(++timing_delay_count >= 100) {
 					    timing_open_off_count++;
 						timing_delay_count = 0;
@@ -509,7 +502,7 @@ void io_out_ctl_thread_server(void)
 					//时序关
 					buffer[0] = (unsigned char)(diff & 0xFF);
 					buffer[1] = (unsigned char)(diff>>8);
-					_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
+					_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buffer);
 					if(++timing_delay_count >= 100) {
 					    timing_open_off_count--;
 						timing_delay_count = 0;

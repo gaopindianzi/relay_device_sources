@@ -56,10 +56,10 @@
 #endif
 //---------------------以上是485自动配置定义变量---------------------
 
-#define USE_AUTO_CONFIG     //协议2   //是否开启 新的接口
+//#define USE_AUTO_CONFIG     //协议2   //是否开启 新的接口
 
 //#define    CHANGE_IP_REBOOT_SYSTEM              //龚华青的版本,修改后即可重启，无需询问（一般不用,用命令重启）
-#define    DEFINE_IO_TIMING_ON                  //是否有定时功能
+//#define    DEFINE_IO_TIMING_ON                  //是否有定时功能
 //#define    DEFINE_POWER_RELAY_OLL_ON
 
 #ifdef   DEBUG_ON

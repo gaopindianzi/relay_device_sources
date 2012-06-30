@@ -47,6 +47,8 @@
 #include "io_out.h"
 #include "io_time_ctl.h"
 #include "bsp.h"
+#include "sys_var.h"
+
 #include "debug.h"
 
 #define THISINFO        0
@@ -68,14 +70,11 @@ int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus)
 	uint32_t tmp;
 	uint16_t num;
 	int rc;
-	FILE * iofile = fopen("relayctl", "w+b");
-	ASSERT(iofile);
-	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
-	ASSERT(tmp);
+
+
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
 	num = tmp;
-	rc = _ioctl(_fileno(iofile), IO_OUT_GET, io_out_buffer);
-	fclose(iofile);
-	ASSERT(rc==0);
+	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, io_out_buffer);
 
 	//if(THISINFO)dumpdata(pmodbus,sizeof(modbus_type_fc1_cmd));
 	count = pmodbus->bit_count_h;
@@ -124,14 +123,11 @@ int  ReadInputDiscretes(modbus_type_fc1_cmd * pmodbus)
 	uint32_t tmp;
 	uint16_t num;
 	int rc;
-	FILE * iofile = fopen("relayctl", "w+b");
-	ASSERT(iofile);
-	rc = _ioctl(_fileno(iofile), GET_IN_NUM, &tmp);
-	ASSERT(tmp);
+
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
 	num = tmp;
-	rc = _ioctl(_fileno(iofile), IO_IN_GET, io_out_buffer);
-	fclose(iofile);
-	ASSERT(rc==0);
+	rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, io_out_buffer);
+
 	count = pmodbus->bit_count_h;count <<= 8; count |= pmodbus->bit_count_l;
 	modbus_type_fc1_ack * pack = (modbus_type_fc1_ack *)pmodbus;
 	if(count) {
@@ -171,10 +167,9 @@ int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 	uint32_t tmp;
 	uint16_t index;
 	int rc;
-	FILE * iofile = fopen("relayctl", "w+b");
-	ASSERT(iofile);
-	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
-	ASSERT(rc==0);
+
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+
 	index = pmodbus->ref_number_h; index <<= 8; index |= pmodbus->ref_number_l;
 	if(index < tmp) {
 		//范围内
@@ -182,12 +177,11 @@ int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 		buffer[1] = index >> 8;
 		buffer[0] = index & 0xFF;
 		if(pmodbus->onoff) {
-		    _ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
+		    _ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buffer);
 		} else {
-			_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
+			_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buffer);
 		}
 	}
-	fclose(iofile);
 	return sizeof(modbus_type_fc5_cmd);
 }
 
@@ -200,10 +194,8 @@ int force_multiple_coils(unsigned char * hexbuf,unsigned int len)
 
 	uint32_t tmp;
 	int rc;
-	FILE * iofile = fopen("relayctl", "w+b");
-	ASSERT(iofile);
-	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
-	ASSERT(rc==0);
+
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
 
 	address <<= 8;
 	address |= hexbuf[3];
@@ -223,14 +215,13 @@ int force_multiple_coils(unsigned char * hexbuf,unsigned int len)
 			buffer[1] = (unsigned char)(address>>8);
 			if(hexbuf[7+i/8]&code_msk[i%8]) {
 				//设置继电器
-				_ioctl(_fileno(iofile), IO_SET_ONEBIT, buffer);
+				_ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buffer);
 			} else {
-				_ioctl(_fileno(iofile), IO_CLR_ONEBIT, buffer);
+				_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buffer);
 			}
 		}
 		address++;
 	}
-	fclose(iofile);
 	return 6;  //返回6个字节，不能动
 }
 

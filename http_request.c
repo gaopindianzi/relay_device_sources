@@ -26,23 +26,21 @@
 #include "io_time_ctl.h"
 //#include "cgi_thread.h"
 #include "multimgr_device_dev.h"
-
+#include "sys_var.h"
 //#include "bsp.h"
 #include "debug.h"
 
-#define THISINFO          1
-#define THISERROR         1
-#define THISASSERT        1
+#define THISINFO          0
+#define THISERROR         0
+#define THISASSERT        0
 
-#define HTTP_INFO         1
-#define HTTP_DATA_PRINT   1
+#define HTTP_INFO         0
+#define HTTP_DATA_PRINT   0
 
 
-char http_buffer[2024];
-char buffer[64];
+char http_buffer[1024];
+char buffer[1024];
 unsigned int rx_index = 0;
-
-static FILE  * iofile        = NULL;
 
 
 #ifdef APP_MULTI_MANGER_FRAME
@@ -93,6 +91,7 @@ int HttpSendRequest(TCPSOCKET * sock)
 	device_info_st   devinfo;
 	int len = 0;
 	uint32_t val = 0;
+	int io_out_num = 0;
 	//
 	BspLoadmultimgr_info(&devinfo);
 
@@ -115,7 +114,7 @@ int HttpSendRequest(TCPSOCKET * sock)
 	StringAddStringRight(http_buffer,buffer);
 	//
 	StringAddStringRight(http_buffer,"&input_io_number=");
-	_ioctl(_fileno(iofile), GET_IN_NUM,buffer);
+	_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM,buffer);
 	val = buffer[1]; 
 	val <<= 8; 
 	val |= buffer[0];
@@ -124,7 +123,7 @@ int HttpSendRequest(TCPSOCKET * sock)
 	StringAddStringRight(http_buffer,buffer);
 	//
 	StringAddStringRight(http_buffer,"&input_io_value=");
-	_ioctl(_fileno(iofile), IO_IN_GET,buffer);
+	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET,buffer);
 	val = buffer[1]; 
 	val <<= 8; 
 	val |= buffer[0];
@@ -133,21 +132,28 @@ int HttpSendRequest(TCPSOCKET * sock)
 	StringAddStringRight(http_buffer,buffer);
 	//
 	StringAddStringRight(http_buffer,"&output_io_number=");
-	_ioctl(_fileno(iofile), GET_OUT_NUM,buffer);
+	_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM,buffer);
 	val = buffer[1]; 
 	val <<= 8; 
 	val |= buffer[0];
+	io_out_num = val;
 	if(HTTP_INFO)printf("GetIoOutNumber:0x%X\r\n",(unsigned int)val);
 	ValueIntToStringDec(buffer,val);
 	StringAddStringRight(http_buffer,buffer);
 	//
 	StringAddStringRight(http_buffer,"&output_io_value=");
-	_ioctl(_fileno(iofile), IO_OUT_GET,buffer);
+	_ioctl(_fileno(sys_varient.iofile), IO_OUT_GET,buffer);
 	val = buffer[1]; 
 	val <<= 8; 
 	val |= buffer[0];
 	if(HTTP_INFO)printf("GetIoOut:0x%X\r\n",(unsigned int)val);
+
 	ValueIntToStringBin(buffer,val);
+	if(io_out_num < 32) {
+		buffer[io_out_num] = '\0';
+	}
+	
+
 	StringAddStringRight(http_buffer,buffer);
 	StringAddStringRight(http_buffer,"&rand=");
 	val = rand();
@@ -184,10 +190,10 @@ int HttpPrecessRxData(void)
 					if(HTTP_INFO)printf("http_set_relay:0x%X\r\n",tmp);
 					buffer[0] = tmp & 0xFF;
 				    buffer[1] = (tmp >> 8) & 0xFF;
-				    _ioctl(_fileno(iofile), IO_OUT_SET, buffer);
+				    _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, buffer);
+					return 0;
 				}
 			}
-			return 0;
 		}
 	}
 	return -1;
@@ -197,22 +203,14 @@ int HttpPrecessRxData(void)
 THREAD(tcp_client, arg)
 {
 	int try_count = 0;
-	uint32_t rx_count = 0;
 	int ret = -1;
 	uint32_t tmp;
 	TCPSOCKET * socket = NULL;
-
-	//FILE * resetfile = NULL;
-
-	iofile = fopen("relayctl", "w+b");
-	ASSERT(iofile);
-
 
     NutThreadSetPriority(102);
 
 
 	//获取复位信息
-   // resetfile = fopen("resetctl", "w+b");
 
 	while(1) {
 		uint32_t              ip_addr;
@@ -228,8 +226,7 @@ THREAD(tcp_client, arg)
 		if(++try_count > 3) {
 			if(THISERROR)printf("\r\nRequestSystemReboot\r\n");
 			NutSleep(5000);
-			//_ioctl(_fileno(resetfile), SET_RESET, NULL);
-			//while(1) NutSleep(1000);
+			try_count = 0;
 			continue;
 		}
 
@@ -244,7 +241,7 @@ THREAD(tcp_client, arg)
 				//不能成功解析IP地址
 				//等待，继续解析
 				if(THISERROR)printf("Cound not prase the %s to ip addr!,try again.\r\n",sys_info.host_addr);
-				//NutSleep(1000);
+				NutSleep(1000);
 				continue;
 			}
 		} else {
@@ -259,8 +256,13 @@ THREAD(tcp_client, arg)
 				break;
 			}
 		    //创建连接
+			DEBUGMSG(THISINFO,("Nut Tcp Clreate Socket\r\n"));
 		    socket = NutTcpCreateSocket();
-		    ASSERT(socket);
+			if(socket == 0) {
+				DEBUGMSG(THISERROR,("Nut Tcp Create Socket failed,try again...!\r\n"));
+				NutSleep(1000);
+				continue;
+			}
 		    tmp = 60000;
 		    ret = NutTcpSetSockOpt((TCPSOCKET *)socket,SO_RCVTIMEO,&tmp,sizeof(uint32_t));
 		    ASSERT(!ret);
@@ -305,20 +307,24 @@ THREAD(tcp_client, arg)
 			   } else if(len > 0) {
 				   //做处理
 				   try_count = 0;
-				   rx_count += len;
-				   //printf("RX:%u\r\n",rx_count);
-				   if(HTTP_DATA_PRINT)dump_data(http_buffer,len);
-				   if(!HttpPrecessRxData()) {
+				   rx_index += len;
+				   printf("RX:%u\r\n",rx_index);
+				   if(HTTP_DATA_PRINT)dump_data(http_buffer,rx_index);
+				   if(HttpPrecessRxData() == 0) {
 					   rx_index = 0;
 					   break;
 				   }
 			    }
-		    }
+			}
 		    //关闭
 		    if(THISINFO)printf("tcp close socket.\r\n");
-		    NutTcpCloseSocket(socket);
+			NutTcpCloseSocket(socket);
 			if(THISINFO)printf("NutSleep(%d)S\r\n",sys_info.up_time_interval);
-		    NutSleep(sys_info.up_time_interval*1000);
+			if(sys_info.up_time_interval == 0) {
+				NutSleep(1000);
+			} else {
+				NutSleep(sys_info.up_time_interval*1000);
+			}
 		}
     }
 }
@@ -326,5 +332,5 @@ THREAD(tcp_client, arg)
 
 void StartHttpRequestThread(void)
 {
-	NutThreadCreate("tcp_client", tcp_client, 0, 512);
+	NutThreadCreate("tcp_client", tcp_client, 0, 1048);
 }

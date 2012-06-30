@@ -52,6 +52,7 @@
 #include <dev/relaycontrol.h>
 #include <cfg/platform_def.h>
 #include "io_out.h"
+#include "sys_var.h"
 #include "bsp.h"
 
 #ifdef   APP_EXTEND_IO
@@ -76,16 +77,16 @@ THREAD(extend_io_thread, arg)
 	if(THISINFO)printf("extend_io_thread is running...\r\n");
 	while(1)
 	{
-		if(sys_io.iofile) {
-			if(sys_io.pioout) {
+		if(sys_varient.iofile) {
+			if(sys_varient.pioout) {
 				//发送485数据
-				if(sys_io.stream_max485) {
+				if(sys_varient.stream_max485) {
 					//构建发送程序
 					//有一个BUG，也许是串口的....
 					pst->ioary[0] = sys_io.pioout[3]; //从16路开始
 					pst->ioary[1] = sys_io.pioout[2]; //从16路开始
 					tx_buffer[8] = check_sum(tx_buffer,sizeof(tx_buffer)-1);
-					fwrite(tx_buffer,sizeof(char),sizeof(tx_buffer),sys_io.stream_max485);
+					fwrite(tx_buffer,sizeof(char),sizeof(tx_buffer),sys_varient.stream_max485);
 				} else {
 					if(THISERROR)printf("sys_io.stream_max485 not opened!\r\n");
 				}
@@ -102,13 +103,9 @@ THREAD(extend_io_thread, arg)
 void StartExtendIoThread(void)
 {
 	uint32_t baud = 9600;
-
-	NutRegisterDevice(&devUart4851, 0, 0);
-	sys_io.stream_max485 = fopen("uart4851", "w+b");
-	ASSERTMSG(sys_io.stream_max485,("open 485 failed!"));
-    _ioctl(_fileno(sys_io.stream_max485), UART_SETSPEED, &baud);
+    _ioctl(_fileno(sys_varient.stream_max485), UART_SETSPEED, &baud);
 	baud = 5; //10ms
-	_ioctl(_fileno(sys_io.stream_max485), UART_SETREADTIMEOUT, &baud);
+	_ioctl(_fileno(sys_varient.stream_max485), UART_SETREADTIMEOUT, &baud);
 	if(THISINFO)printf("Start extend_io_thread...\r\n");
     NutThreadCreate("extend_io_thread",  extend_io_thread, 0, 1024);
 }
