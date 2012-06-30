@@ -233,42 +233,14 @@ int main(void)
 		if(THISINFO)printf("not init factory data.\r\n");
 	}
 
-
-	if(0 && THISINFO) {
-		NutRegisterDevice(&devUart4851, 0, 0);
-		FILE *file485 = fopen("uart4850", "w+b");
-		if(!file485) {
-			printf("file485 1  no valid.\r\n");
-		} else {
-			printf("file485 1  valid.\r\n");
-		}
-		fclose(file485);
-
-		file485 = fopen("uart4851", "w+b");
-		if(!file485) {
-			printf("file485 2 no valid.\r\n");
-		} else {
-			printf("file485 2 valid.\r\n");
-		}
-		fclose(file485);
-
-	}
-
-
 	//注册复位，看门狗控制器
 	NutRegisterDevice(&devAvrResetCtl, 0, 0);
 	//注册输入输出接口驱动
 	NutRegisterDevice(&devRelayInputOutput, 0, 0);
 	//注册485接口
 	NutRegisterDevice(&devUart4851, 0, 0);
-
-	
-	count = 0x1234;
-	config = ((unsigned char *)&count)[0];
-
-	if(THISINFO)printf("Ending config = 0x1234 little = 0x%x\r\n",config);
-	count = 0;
-
+	//注册文件系统
+	NutRegisterDevice(&MY_FSDEV, 0, 0);
 
 #ifdef APP_TIMEIMG_ON
 	if(THISINFO)printf("sizeof(timing_node_eeprom)=%d,BSP_MAX_OFFSET=0x%x\r\n",sizeof(timing_node_eeprom),BSP_MAX_OFFSET);
@@ -351,9 +323,6 @@ int main(void)
 		if(THISINFO)puts("NutRegisterRtc OK");
     }
 	while(1) {
-
-
-
 		if(!NutRtcSetTime(&sys_time)) {
 			if(THISERROR)printf("set rtc successful!\r\n");
 		} else {
@@ -526,23 +495,22 @@ no_default:
 	}
 config_finish:
     
+
 	NutRegisterDiscovery((u_long)-1, 0, DISF_INITAL_ANN);
 	//
 	//
 #ifdef APP_CGI_ON
 	StartCGIServer();
-	NutRegisterDevice(&MY_FSDEV, 0, 0);
 #endif
 	StartBinCmdServer();
 
 #ifdef USE_AUTO_CONFIG
-	StartUdpCmdServer();
+	//StartUdpCmdServer();
 #endif
 
 #ifdef APP_485_ON
 	StartCAN_485Srever();
 #endif
-
 
 #ifdef APP_MULTI_MANGER_FRAME
 	StratMultiMgrDeviceThread();

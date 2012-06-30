@@ -30,9 +30,9 @@
 //#include "bsp.h"
 #include "debug.h"
 
-#define THISINFO          0
-#define THISERROR         0
-#define THISASSERT        0
+#define THISINFO          1
+#define THISERROR         1
+#define THISASSERT        1
 
 #define HTTP_INFO         0
 #define HTTP_DATA_PRINT   0
@@ -209,6 +209,7 @@ THREAD(tcp_client, arg)
 
     NutThreadSetPriority(102);
 
+	DEBUGMSG(THISINFO,("php tcp client start...\r\n"));
 
 	//获取复位信息
 

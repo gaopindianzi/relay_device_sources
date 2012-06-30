@@ -66,8 +66,6 @@ extern void dumpdata(void * _buffer,int len);
 #define THISINFO       0
 #define THISERROR      0
 
-
-static FILE  * stream_max485 = NULL;
 UDPSOCKET * socket_max485    = NULL;
 
 #define     BUFFER_SIZE                  (128+10) 
@@ -346,9 +344,9 @@ void StartCAN_485Srever(void)
 
 	if(THISINFO)printf("Start RS485 Server...\r\n");
 
-    _ioctl(_fileno(stream_max485), UART_SETSPEED, &baud);
+    _ioctl(_fileno(sys_varient.stream_max485), UART_SETSPEED, &baud);
 	baud = 5; //10ms
-	_ioctl(_fileno(stream_max485), UART_SETREADTIMEOUT, &baud);
+	_ioctl(_fileno(sys_varient.stream_max485), UART_SETREADTIMEOUT, &baud);
     NutThreadCreate("thread_can485_read",  thread_can485_read, 0, 512);
 }
 

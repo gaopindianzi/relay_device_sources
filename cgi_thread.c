@@ -244,7 +244,7 @@ void StartCGIServer(void)
 #endif
 	
 
-    for (i = 1; i <= 8; i++) {
+    for (i = 1; i <= 3; i++) {
         char thname[] = "httpd0";
 
         thname[5] = '0' + i;
