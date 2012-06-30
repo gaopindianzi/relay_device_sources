@@ -50,8 +50,8 @@
 #include "debug.h"
 
 
-#define THISINFO          1
-#define THISERROR         1
+#define THISINFO          0
+#define THISERROR         0
 
 
 #define  IO_OUT_COUNT_MAX            32
