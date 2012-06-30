@@ -146,13 +146,21 @@ int HttpSendRequest(TCPSOCKET * sock)
 	val = buffer[1]; 
 	val <<= 8; 
 	val |= buffer[0];
+
+
+	if(io_out_num == 2) {
+		val &= 0x3;
+	} else if(io_out_num == 4) {
+		val &= 0xF;
+	} else if(io_out_num == 8) {
+		val &= 0xFF;
+	} else if(io_out_num == 16) {
+		val &= 0xFFFF;
+	}
+
 	if(HTTP_INFO)printf("GetIoOut:0x%X\r\n",(unsigned int)val);
 
 	ValueIntToStringBin(buffer,val);
-	if(io_out_num < 32) {
-		buffer[io_out_num] = '\0';
-	}
-	
 
 	StringAddStringRight(http_buffer,buffer);
 	StringAddStringRight(http_buffer,"&rand=");
@@ -309,7 +317,7 @@ THREAD(tcp_client, arg)
 				   //×ö´¦Àí
 				   try_count = 0;
 				   rx_index += len;
-				   printf("RX:%u\r\n",rx_index);
+				   DEBUGMSG(THISINFO,("RX:%u\r\n",rx_index));
 				   if(HTTP_DATA_PRINT)dump_data(http_buffer,rx_index);
 				   if(HttpPrecessRxData() == 0) {
 					   rx_index = 0;

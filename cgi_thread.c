@@ -632,9 +632,11 @@ int main_ajax_handle(FILE * stream, REQUEST * req)
 		save_relay_info(&sys_info);
 		BspSavemultimgr_info(&devinfo);
 		//输出返回信息
-		fputs_P(PSTR("b=b"),stream);
+		fputs_P(PSTR("a=a"),stream);
 		fprintf_P(stream,PSTR("&name=%s"),devinfo.host_name);
+		fputs_P(PSTR("&b=b"),stream);
 		fprintf_P(stream,PSTR("&id=%s"),sys_info.id);
+		fputs_P(PSTR("&c=c"),stream);
 		fprintf_P(stream,PSTR("&en=%s"),sys_info.enable?"t":"f");
 		fprintf_P(stream,PSTR("&addr=%s"),sys_info.host_addr);
 		fprintf_P(stream,PSTR("&page=%s"),sys_info.web_page);

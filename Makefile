@@ -36,7 +36,7 @@ MAC1 = 06
 MAC2 = 98
 MAC3 = 42
 MAC4 = 05
-MAC5 = 93
+MAC5 = 95
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
