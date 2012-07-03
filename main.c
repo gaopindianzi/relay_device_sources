@@ -237,8 +237,10 @@ int main(void)
 	NutRegisterDevice(&devAvrResetCtl, 0, 0);
 	//注册输入输出接口驱动
 	NutRegisterDevice(&devRelayInputOutput, 0, 0);
+#ifdef APP_485_ON
 	//注册485接口
 	NutRegisterDevice(&devUart4851, 0, 0);
+#endif
 	//注册文件系统
 	NutRegisterDevice(&MY_FSDEV, 0, 0);
 
@@ -296,8 +298,11 @@ int main(void)
 		//打开文件
 		sys_varient.iofile = fopen("relayctl", "w+b");
 		sys_varient.resetfile = fopen("resetctl", "w+b");
+#ifdef APP_485_ON
 		sys_varient.stream_max485 = fopen("uart4851", "w+b");
-		ASSERT(sys_varient.iofile && sys_varient.resetfile && sys_varient.stream_max485);
+		ASSERT(sys_varient.stream_max485);
+#endif
+		ASSERT(sys_varient.iofile && sys_varient.resetfile);
 	}
 
 
