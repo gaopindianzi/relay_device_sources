@@ -298,7 +298,7 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 			if(strcmp(name,"ID") == 0) {
 				int id = atoi(value);
 				if(THISINFO)printf("reveice ID = %d",id);
-				if(id < 1 || id > 2) {
+				if(0)  {  //id < 1 || id > 2) {
 					fputs_P(PSTR("status=ID parameter error! (ID must be >= 1 and <= 2!"),stream);
 					break;
 				} else {
