@@ -52,6 +52,7 @@
 #include "modbus_interface.h"
 #include "time_handle.h"
 #include "rc4.h"
+#include "sys_var.h"
 
 #include "debug.h"
 
@@ -61,7 +62,6 @@
 
 #define   DEFAULT_WORK_PORT       505
 
-extern FILE * resetfile;
 
 //多管理设备信息
 device_info_st    multimgr_info;
@@ -384,7 +384,7 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 			UdpSendWithRc4Enecrytion(socket,addr,port,rst,len);
 			//可以重启系统
 			DEBUGMSG(THISINFO,("Reset System...\r\n"));
-			_ioctl(_fileno(resetfile), SET_RESET, NULL);
+			_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 		}
 		break;
 	default:

@@ -7,6 +7,10 @@
 <!--
 .STYLE2 {font-size: 0px}
 .STYLE3 {font-size: 12px; }
+
+table{ background:#000;}
+table tr td{ background:#fff;}
+
 -->
 </style>
 </head>
@@ -71,7 +75,7 @@ function HandleResponse(response)
     }
   var now = new Date();
   var timestr = now.toLocaleString();
-  document.getElementById('ResponseDiv').innerHTML ="时间：" + timestr;
+  document.getElementById('ResponseDiv').innerHTML ="TIME：" + timestr;
   //document.getElementById('ResponseDiv').innerHTML = "Command Success:" + timestr;
 }
 
@@ -132,7 +136,7 @@ function HandleQueryResponse(response)
   }
   var now = new Date();
   var timestr = now.toLocaleString();
-  document.getElementById('ResponseDiv').innerHTML = "时间：" + timestr;
+  document.getElementById('ResponseDiv').innerHTML = "TIME：" + timestr;
   //document.getElementById('ResponseDiv').innerHTML = "Query Success:�? + timestr;
 }
 function SetiovalueRequest()
@@ -221,7 +225,7 @@ function HandleQueryInfochout(response)
     io = domain[1].split("=",2);
   }
   var io_str = io[1];
-  document.getElementById('infochout').innerHTML = "(" + io_str + "路输出)";
+  document.getElementById('infochout').innerHTML = "[" + io_str + "路输出]";
 }
 
 function quary_infochout()
@@ -262,40 +266,41 @@ function  body_load()
 
 <body onload= "body_load() ">
 <form name="question_form">
-  <table border="1" align="center" cellspacing="1">
+  <table align="center" border="0" cellspacing="1" cellpadding="0">
     <tr>
       <td colspan="2"><div align="center">远程开关电源控制<div id='infochout'></div></div></td>
     </tr>
     <tr>
       <td width="117"><div align="center">
-          <input type="checkbox" name = "led1">第1路 </div></td>
-      <td width="124"><div align="center">
+          <input type="checkbox" name = "led1">
+          第01路 </div></td>
+      <td width="117"><div align="center">
         <input type="checkbox" name = "led2">
-      第2路</div></td>
+          第02路</div></td>
     </tr>
     <tr>
       <td><div align="center">
         <input type="checkbox" name = "led3">
-      第3路</div></td>
+      第03路</div></td>
       <td><div align="center">
         <input type="checkbox" name = "led4">
-      第4路</div></td>
+      第04路</div></td>
     </tr>
     <tr>
       <td><div align="center">
         <input type="checkbox" name = "led5">
-      第5路</div></td>
+      第05路</div></td>
       <td><div align="center">
         <input type="checkbox" name = "led6">
-      第6路</div></td>
+      第06路</div></td>
     </tr>
     <tr>
       <td><div align="center">
         <input type="checkbox" name = "led7">
-      第7路</div></td>
-      <td><div align="center"><span class="STYLE2">
+      第07路</div></td>
+      <td><div align="center">
         <input type="checkbox" name = "led8">
-      </span>第8路</div></td>
+      第08路</div></td>
     </tr>
     <tr>
       <td><div align="center" class="STYLE2">
@@ -308,12 +313,11 @@ function  body_load()
       </div></td>
     </tr>
     <tr>
-      <td colspan="2"><div id='ResponseDiv'>
-          <div align="left">...</div>
+      <td colspan="2"><div align="center"><div id='ResponseDiv'> ...</div>
       </div></td>
     </tr>
     <tr>
-      <td height="14" colspan="2"><div align="center">深圳市精锐达技术科技有限公司</div></td>
+      <td height="14" colspan="2"><div align="center">深圳市精锐达网络技术有限公司</div></td>
     </tr>
   </table>
 </form>

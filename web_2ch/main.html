@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>管理界面</title>
+</head>
+<script type="text/javascript">
+
+function getXMLHttp()
+{
+  var xmlHttp
+
+  try
+  {
+    //Firefox, Opera 8.0+, Safari
+    xmlHttp = new XMLHttpRequest();
+  }
+  catch(e)
+  {
+    //Internet Explorer
+    try
+    {
+      xmlHttp = new ActiveXObject("Msxml2.XMLHTTP");
+    }
+    catch(e)
+    {
+      try
+      {
+        xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+      }
+      catch(e)
+      {
+        alert("Your browser does not support AJAX!")
+        return false;
+      }
+    }
+  }
+  return xmlHttp;
+}
+
+var action = "";
+
+function HandleSettingResponse(response)
+{
+  var plist = response.split("&");
+  var out = "";
+  var i = 0;
+  var form =  window.document.setting_form;
+  for(i=0;i<plist.length;i++) {
+     var section = plist[i];
+	 var sets = section.split("=");
+	 if(sets.length != 2) { 
+	     continue;
+	 }
+	 var name = sets[0];
+	 var value = sets[1];
+	 if(name == "e" && value == "e") { 
+	     break;
+	 }
+	  out += name + "=" + value + ",";
+	 if(name == "") { 
+	 } else if(name == "name") {
+     } else if(name == "id") {
+	     form.device_id.value = value;
+	 } else if(name == "en") {
+	     if(value == "t") {
+		     form.enab[0].checked = true;
+		 } else {  
+		     form.enab[1].checked = true;
+		 }
+	 } else if(name == "addr") {
+	     form.host_address.value = value;
+	 }  else if(name == "page") {
+	     form.web_page.value = value;
+	 } else if(name == "port") {
+	     form.host_tcp_port.value = value;
+	 } else if(name == "upt") { 
+	     form.updata_interval.value = value;
+	 } else { 
+	 }
+  }
+  
+  
+   var now = new Date();
+   var timestr = now.toLocaleString();
+   document.getElementById('ResponseDiv1').innerHTML = "时间:" + timestr;
+   document.getElementById('ResponseDiv2').innerHTML = action + "完毕."; // + out + "<br/><br/>";
+   
+}
+
+
+function SetNewParameter(setting)
+{
+  var xmlHttp = getXMLHttp();
+  var now = new Date();
+  var timestr = now.toLocaleString();
+  
+  xmlHttp.onreadystatechange = function()
+  {
+    if(xmlHttp.readyState == 4)
+    {
+      HandleSettingResponse(xmlHttp.responseText);
+	  return ;
+    }
+  }
+ 
+  var req = "";
+  
+  if(setting == 0) {
+	 action = "查询";
+	 req += "quary=" + now;
+  } else { 
+     action = "修改";
+      var form = window.document.setting_form;
+	  req += "change=" + now;
+      req += "&id=" + form.device_id.value;
+	  
+      if(form.enab[0].checked == true) {
+         req += "&en=t";
+      } else if(form.enab[1].checked == true) {
+        req += "&en=f";
+      }
+      if(form.host_address.value != false) req += "&addr=" + form.host_address.value;
+	  if(form.web_page.value != false) req += "&page=" + form.web_page.value;
+      if(form.host_tcp_port.value != false) req += "&port=" + form.host_tcp_port.value;
+	  req += "&upt=" + form.updata_interval.value;
+  }
+  
+  document.getElementById('ResponseDiv1').innerHTML = "时间:" + timestr;
+  document.getElementById('ResponseDiv2').innerHTML = "正在" + action + "...<br/>"; // + req;
+   
+  
+  xmlHttp.open("GET","/cgi-bin/main_ajax_handle.cgi?"+req);
+  xmlHttp.send(null);
+}
+
+function  body_load()
+{
+	SetNewParameter(0);
+}
+</script>
+
+<body onload= "body_load() ">
+远程网络开关管理界面<br /><br />
+<form name="setting_form"><br />
+开启主动连接到远程服务器功能:<br />
+<input type="radio" name="enab" value="enable" />开启
+<input type="radio" name="enab" value="disable" />关闭
+<br /><br />
+设备ID号:<br />
+<input type="text" name="device_id" /><br />
+<br/>
+主机地址设定:<br />
+<input type="text" name="host_address" /><br />
+<br />
+请求页面:<br />
+<input type="text" name="web_page" /><br />
+<br />
+端口号(HTTP常用端口号是80):<br />
+<input type="text" name="host_tcp_port" /><br />
+<br />
+每次主动连接到服务器之间的时间间隔,<br />
+一般更新速度不宜太快，服务器要处理的设备请求太多有可能响应不过来,<br />
+一般设为10到60之间即可:（单位：秒)<br />
+<input type="text" name="updata_interval" /><br />
+<br />
+  <input name="button" type ="button" onClick ="SetNewParameter(0);"  value="查询">
+  <input name="button2" type ="button" onClick ="SetNewParameter(1);"  value="修改">
+</form>
+<br /><br />
+<div id='ResponseDiv1'>点击查询可以刷新状态，点击设置可以修改设备参数</div><br/>
+<div id='ResponseDiv2'></div>
+</br>
+<a href=""/index.html"">返回登陆界面</a><br />
+</br>
+CopyRight &copy; 2010-2012 深圳市精锐达科技有限公司. All Rights Reserved 
+</body>
+</html>

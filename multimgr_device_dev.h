@@ -61,6 +61,46 @@ typedef struct __reset_device_st
 } reset_device_st;
 
 
+
+
+
+
+
+
+
+
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+
+//客户机版本的数据结构
+typedef struct _ethernet_relay_info
+{
+	unsigned char factory_mode;
+	char id[15];
+	volatile unsigned char enable;
+	char host_addr[128];
+	char web_page[64];
+	unsigned int port;
+	unsigned int up_time_interval;
+} ethernet_relay_info;
+
+extern ethernet_relay_info sys_info;
+extern void StartHttpRequestThread(void);
+
 #endif
+
+
+
+
+
+
+
+
+
+
+#endif
+
+
+
+
 
 

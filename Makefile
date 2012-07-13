@@ -27,7 +27,7 @@ EXT_BOARD_IS_8CHIN_8CHOUT_V2  =   9
 RELAY_PLATFORM_16CHOUT_HOST_RESET = 10
 #
 #定义当前需要编译的板类型
-BSP_BOARD_TYPE = $(RELAY_PLATFORM_16CHOUT_HOST_RESET)
+BSP_BOARD_TYPE = $(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
 
 #
 #发布MAC地址
@@ -36,7 +36,7 @@ MAC1 = 06
 MAC2 = 98
 MAC3 = 42
 MAC4 = 05
-MAC5 = 8B
+MAC5 = 95
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
@@ -48,6 +48,7 @@ APP_CGI_ON = ON
 APP_485_ON = ON
 APP_MODBUS_TCP_ON  = ON
 APP_MULTI_MANGER_FRAME = ON
+APP_HTTP_PROTOTOL_CLIENT = ON
 #------------------------------------------------------------------------------
 
 
@@ -59,7 +60,6 @@ MAC_STRING = $(MAC0)_$(MAC1)_$(MAC2)_$(MAC3)_$(MAC4)_$(MAC5)
 
 ifeq ($(BSP_BOARD_TYPE),$(EXT_BOARD_IS_2CHIN_2CHOUT_BOX))
 HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
-#SYS_HAVE_485 = ON
 WEBDIR  = web_2ch
 HEX_FILE = 2ch_$(MAC_STRING)
 endif
@@ -136,6 +136,11 @@ SRCS := $(SRCS) rc4.c multimgr_device.c
 HWDEF += -DAPP_MULTI_MANGER_FRAME
 endif
 
+ifeq ($(APP_HTTP_PROTOTOL_CLIENT),ON)
+SRCS := $(SRCS) StringPrecess.c http_request.c
+HWDEF += -DAPP_HTTP_PROTOTOL_CLIENT
+endif
+
 
 include ../Makedefs
 
@@ -148,7 +153,7 @@ TARG =  $(PROJ).hex
 DTARG := $(DTARG)
 
 all: $(OBJS) $(TARG) $(ITARG) $(DTARG)
-$(WEBFILE): $(WEBDIR)/index.html $(WEBDIR)/io_out_control.html
+$(WEBFILE): $(WEBDIR)/index.html $(WEBDIR)/io_out_control.html  $(WEBDIR)/main.html 
 	$(CRUROM) -r -o$(WEBFILE) $(WEBDIR)
 
 include ../Makerules

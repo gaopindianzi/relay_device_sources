@@ -88,11 +88,14 @@
 #include <dev/usartavr485.h>
 #include <cfg/platform_def.h>
 #include "multimgr_device.h"
-
+#include "sys_var.h"
 #include "bsp.h"
+
+#include "debug.h"
 
 #define THISINFO       0
 #define THISERROR      0
+#define THISASSERT     0
 
 
 //#define DEFINE_TEST_WDT_RESET   //是否用看门狗测试一下复位情况
@@ -127,11 +130,15 @@
 
 
 
-FILE * resetfile = NULL;
-
 //多管理设备信息
 extern device_info_st    multimgr_info;
 //
+
+//系统文件接口
+sys_varient_type  sys_varient;
+
+
+
 
 
 uint32_t toheip(u8_t ip[]);
@@ -211,6 +218,14 @@ int main(void)
 		strcpy(gpassword,"admin");
 		BspWriteWebPassword(gpassword);
 		BspWriteWebPassword(gpassword);
+		//初始化HTTP_CLIENT参数
+		strcpy(sys_info.id,"20120701000");
+		strcpy(sys_info.host_addr,"pxwkoo.hk91.hqidc.net");
+		strcpy(sys_info.web_page,"relay_server.php");
+		sys_info.port = 80;
+		sys_info.up_time_interval = BROADCASTTIME_MIN;
+		sys_info.factory_mode = 0;
+		save_relay_info(&sys_info);
 		//保存更新
 		BspWriteFactoryOut(0x55);
 		BspWriteFactoryOut(0x55);
@@ -218,41 +233,16 @@ int main(void)
 		if(THISINFO)printf("not init factory data.\r\n");
 	}
 
-
-	if(0 && THISINFO) {
-		NutRegisterDevice(&devUart4851, 0, 0);
-		FILE *file485 = fopen("uart4850", "w+b");
-		if(!file485) {
-			printf("file485 1  no valid.\r\n");
-		} else {
-			printf("file485 1  valid.\r\n");
-		}
-		fclose(file485);
-
-		file485 = fopen("uart4851", "w+b");
-		if(!file485) {
-			printf("file485 2 no valid.\r\n");
-		} else {
-			printf("file485 2 valid.\r\n");
-		}
-		fclose(file485);
-
-	}
-
-
 	//注册复位，看门狗控制器
 	NutRegisterDevice(&devAvrResetCtl, 0, 0);
 	//注册输入输出接口驱动
 	NutRegisterDevice(&devRelayInputOutput, 0, 0);
-
-
-	
-	count = 0x1234;
-	config = ((unsigned char *)&count)[0];
-
-	if(THISINFO)printf("Ending config = 0x1234 little = 0x%x\r\n",config);
-	count = 0;
-
+#ifdef APP_485_ON
+	//注册485接口
+	NutRegisterDevice(&devUart4851, 0, 0);
+#endif
+	//注册文件系统
+	NutRegisterDevice(&MY_FSDEV, 0, 0);
 
 #ifdef APP_TIMEIMG_ON
 	if(THISINFO)printf("sizeof(timing_node_eeprom)=%d,BSP_MAX_OFFSET=0x%x\r\n",sizeof(timing_node_eeprom),BSP_MAX_OFFSET);
@@ -304,10 +294,20 @@ int main(void)
 	}
 
 
+	{
+		//打开文件
+		sys_varient.iofile = fopen("relayctl", "w+b");
+		sys_varient.resetfile = fopen("resetctl", "w+b");
+#ifdef APP_485_ON
+		sys_varient.stream_max485 = fopen("uart4851", "w+b");
+		ASSERT(sys_varient.stream_max485);
+#endif
+		ASSERT(sys_varient.iofile && sys_varient.resetfile);
+	}
+
+
 	{ //获取复位信息
-	    resetfile = fopen("resetctl", "w+b");
-		_ioctl(_fileno(resetfile), GET_RESET_TYPE, &reset_type);
-		//fclose(resetfile);
+		_ioctl(_fileno(sys_varient.resetfile), GET_RESET_TYPE, &reset_type);
 	}
 
 
@@ -328,9 +328,6 @@ int main(void)
 		if(THISINFO)puts("NutRegisterRtc OK");
     }
 	while(1) {
-
-
-
 		if(!NutRtcSetTime(&sys_time)) {
 			if(THISERROR)printf("set rtc successful!\r\n");
 		} else {
@@ -495,7 +492,7 @@ no_default:
 			} else {
 				//分配失败。没有网络功能
 				if(THISINFO)printf("DHCP config failed!\r\n");
-				_ioctl(_fileno(resetfile), SET_RESET, NULL);
+				_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 				for(;;);
 			}
 			goto config_finish;
@@ -503,31 +500,33 @@ no_default:
 	}
 config_finish:
     
+
 	NutRegisterDiscovery((u_long)-1, 0, DISF_INITAL_ANN);
 	//
 	//
 #ifdef APP_CGI_ON
 	StartCGIServer();
-	NutRegisterDevice(&MY_FSDEV, 0, 0);
 #endif
 	StartBinCmdServer();
+
 #ifdef USE_AUTO_CONFIG
-	StartUdpCmdServer();
+	//StartUdpCmdServer();
 #endif
 
 #ifdef APP_485_ON
 	StartCAN_485Srever();
 #endif
 
-
 #ifdef APP_MULTI_MANGER_FRAME
 	StratMultiMgrDeviceThread();
 #endif
 
-
-
 #ifdef APP_MODBUS_TCP_ON
 	StartModbus_Interface();
+#endif
+
+#ifdef APP_HTTP_PROTOTOL_CLIENT
+	StartHttpRequestThread();
 #endif
 
 	while(0) {
@@ -602,7 +601,7 @@ config_finish:
 		if(++baud == 30*100) {
 			//启动
 			if(1)printf("reset system ...\r\n");
-			_ioctl(_fileno(resetfile), SET_RESET, NULL);
+			_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 		}
 #endif
 	}

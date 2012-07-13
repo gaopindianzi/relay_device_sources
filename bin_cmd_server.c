@@ -47,13 +47,12 @@
 #include "time_handle.h"
 #include "io_out.h"
 #include "io_time_ctl.h"
+#include "sys_var.h"
 #include "bsp.h"
 
 #define THISINFO          DEBUG_ON_INFO
 #define THISERROR         DEBUG_ON_ERROR
 
-
-extern FILE * resetfile;
 
 int BspReadBoardInfo(CmdBoardInfo * info);
 int BspWriteBoardInfo(CmdBoardInfo * info);
@@ -78,21 +77,12 @@ void BinCmdPrase(TCPSOCKET * sock,void * buff,int len);
 uint16_t gwork_port = 2000;
 uint16_t gweb_port  = 80;
 
-FILE * iofile = NULL;
-
 void bin_cmd_thread_server(void)
 {
 	uint8_t count = 0;
 	TCPSOCKET * sock;
 	char buff[120];
 	uint32_t time = 16000;
-
-	iofile = fopen("relayctl", "w+b");
-
-	if(!iofile) {
-		if(THISERROR)printf("BIN SERVER:open relayctl failed!\r\n");
-		goto thread_stop;
-	}
 
 	if(THISINFO)printf("CMD:Thraed running...\r\n");
 
@@ -172,9 +162,9 @@ int CmdGetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     //sio->io_value[1] = (uint8_t)((relay_msk >> 8) & 0xFF);;
     //sio->io_value[2] = (uint8_t)((relay_msk >> 16) & 0xFF);;
     //sio->io_value[3] = (uint8_t)((relay_msk >> 24) & 0xFF);;
-	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &tmp);
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
 	sio->io_count = (unsigned char)tmp;
-	rc = _ioctl(_fileno(iofile), IO_OUT_GET, sio->io_value);
+	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
     //
     tcmd->cmd_option    = CMD_ACK_OK;
     tcmd->cmd           = CMD_GET_IO_OUT_VALUE;
@@ -205,8 +195,8 @@ int CmdSetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 		//uint32_t tmp;
 		//SetRelayWithDelay(group_arry4_to_uint32(io->io_value));
 
-		rc = _ioctl(_fileno(iofile), IO_OUT_SET, io->io_value);
-		rc = _ioctl(_fileno(iofile), IO_OUT_GET, sio->io_value);
+		rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, io->io_value);
+		rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
 
         tcmd->cmd_option     = CMD_ACK_OK;
         sio->io_count        = io->io_count;
@@ -251,12 +241,12 @@ int CmdRevertIoOutIndex(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     //if(tmp) {
 		//if(THISINFO)printf("Cmd Sig 8-16 is 0x%x\r\n",io->io_msk[1]);
 	    //RevertRelayWithDelay(tmp);
-	rc = _ioctl(_fileno(iofile), IO_SIG_BITMAP, io->io_msk);
+	rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, io->io_msk);
 	   //È¡»Ø
 	//} else {
 		//if(THISINFO)printf("Cmd Sig None,some error!\r\n");
 	//}
-	rc = _ioctl(_fileno(iofile), IO_OUT_GET, sio->io_msk);
+	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_msk);
 	//tmp =  GetIoOut();
 	//sio->io_msk[0] = (tmp & 0xFF);
 	//sio->io_msk[1] = (tmp >> 8) & 0xFF;
@@ -284,11 +274,11 @@ int CmdGetIoInValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     //
     datasize = datasize;
     //
-	rc = _ioctl(_fileno(iofile), GET_IN_NUM, &tmp);
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
 	sio->io_count = (unsigned char)tmp;
 	memset(sio->io_value,0,sizeof(sio->io_value));
 	if(tmp) {
-		rc = _ioctl(_fileno(iofile), IO_IN_GET, sio->io_value);
+		rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, sio->io_value);
 	}
 
     //sio->io_count    = 8;
@@ -871,7 +861,7 @@ int CmdSetSystemReset(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	if(THISINFO)printf("CmdSetSystemReset.\r\n");
 	act_size = outsize;
 	//RequestSystemReboot();
-	_ioctl(_fileno(resetfile), SET_RESET, NULL);
+	_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 	tcmd->cmd_option    = CMD_ACK_OK;
     tcmd->cmd           = CMD_SET_SYSTEM_RESET;
     tcmd->cmd_index     = cmd->cmd_index;

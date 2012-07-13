@@ -450,3 +450,15 @@ void BspWriteFactoryOut(char ch)
 	NutNvMemSave(offset,&ch,sizeof(char));
 }
 
+#ifdef APP_HTTP_PROTOTOL_CLIENT 
+int load_relay_info(ethernet_relay_info * info)
+{
+	uint16_t offset = BSP_HTTP_CLIENT_INFO_OFFSET;
+	NutNvMemLoad(offset,info,sizeof(ethernet_relay_info));
+}
+int save_relay_info(ethernet_relay_info * info)
+{
+	uint16_t offset = BSP_HTTP_CLIENT_INFO_OFFSET;
+	NutNvMemSave(offset,info,sizeof(ethernet_relay_info));
+}
+#endif

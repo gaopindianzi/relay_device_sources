@@ -55,6 +55,7 @@
 #include <dev/relaycontrol.h>
 #include <cfg/platform_def.h>
 #include "io_out.h"
+#include "sys_var.h"
 #include "bsp.h"
 
 
@@ -65,9 +66,6 @@ extern void dumpdata(void * _buffer,int len);
 #define THISINFO       0
 #define THISERROR      0
 
-
-static FILE  * stream_max485 = NULL;
-static FILE  * iofile        = NULL;
 UDPSOCKET * socket_max485    = NULL;
 
 #define     BUFFER_SIZE                  (128+10) 
@@ -155,55 +153,55 @@ int Modbus_Command_Prase(unsigned char * buffer,unsigned char len,unsigned char 
 	switch(pcmd->command) {
 		case MODBUS_SET_RELAY:
 		{
-		    rc = _ioctl(_fileno(iofile), IO_OUT_SET, pst->ioary);
+		    rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, pst->ioary);
 		}
 		break;
     	case MODBUS_SET_ONEBIT:
 		{
-			rc = _ioctl(_fileno(iofile), IO_SET_ONEBIT, pst->ioary);
-			rc = _ioctl(_fileno(iofile), IO_OUT_GET, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 	    }
 	    break;
 	    case MODBUS_CLR_ONTBIT:
 	    {
-			rc = _ioctl(_fileno(iofile), IO_CLR_ONEBIT, pst->ioary);
-			rc = _ioctl(_fileno(iofile), IO_OUT_GET, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 	    case MODBUS_VERT_OUTPUT:
 	    {
-			rc = _ioctl(_fileno(iofile), IO_SIG_BITMAP, pst->ioary);
-			rc = _ioctl(_fileno(iofile), IO_OUT_GET, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 	    break;
 		case MODBUS_SET_BITMAP:
 		{
-			rc = _ioctl(_fileno(iofile), IO_SET_BITMAP, pst->ioary);
-			rc = _ioctl(_fileno(iofile), IO_OUT_GET, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_SET_BITMAP, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 		case MODBUS_CLR_BITMAP:
 		{
-			rc = _ioctl(_fileno(iofile), IO_CLR_BITMAP, pst->ioary);
-			rc = _ioctl(_fileno(iofile), IO_OUT_GET, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_CLR_BITMAP, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 		case MODBUS_READ_RELAY:
 		if(flag == MODBUS_DEVICE_PACKET) {
 		    scmd->data_len = 2;
-		    rc = _ioctl(_fileno(iofile), IO_OUT_GET, pst->ioary);
+		    rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 	    case MODBUS_READ_INPUT:
 	    if(flag == MODBUS_DEVICE_PACKET) {
 			scmd->data_len = 2;
-			rc = _ioctl(_fileno(iofile), IO_IN_GET, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, pst->ioary);
 		}
 		break;
 		case MODBUS_GET_ONEBIT:
 		if(flag == MODBUS_DEVICE_PACKET) {
 			scmd->data_len = 2;
-			rc = _ioctl(_fileno(iofile), IO_GET_ONEBIT, pst->ioary);
+			rc = _ioctl(_fileno(sys_varient.iofile), IO_GET_ONEBIT, pst->ioary);
 		}
 		break;
 		case MODBUS_SET_ADDRESS:
@@ -237,7 +235,7 @@ int Modbus_Command_Prase(unsigned char * buffer,unsigned char len,unsigned char 
 	if(flag == MODBUS_DEVICE_PACKET && rc == 0) {
 		scmd->pad1 = 0x55;
 		send[sizeof(send)-1] = check_sum(send,sizeof(send)-1);
-		rc = fwrite(send,sizeof(char),sizeof(send),stream_max485);
+		rc = fwrite(send,sizeof(char),sizeof(send),sys_varient.stream_max485);
 	}
 	return rc;
 }
@@ -272,7 +270,7 @@ THREAD(thread_can485_read, arg)
 		
 		size_t size = sizeof(rs485_rx_buffer) - index;
 		//if(THISINFO)printf("s r size = %d",index);
-		size = fread(pbuf,sizeof(char),size,stream_max485);
+		size = fread(pbuf,sizeof(char),size,sys_varient.stream_max485);
 		//if(THISINFO)printf("e r size = %d",size);
 		if(size > 0) {
 			//有数据
@@ -346,30 +344,10 @@ void StartCAN_485Srever(void)
 
 	if(THISINFO)printf("Start RS485 Server...\r\n");
 
-	//打开驱动
-	NutRegisterDevice(&devRelayInputOutput, 0, 0);
-	NutRegisterDevice(&devUart4851, 0, 0);
-
-	iofile        = fopen("relayctl", "w+b");
-    stream_max485 = fopen("uart4851", "w+b");
-	
-	if(!stream_max485) {
-		if(THISERROR)printf("StartCAN_485Srever,open stream_max485 file failed!\r\n");
-		return ;
-	} else {
-		if(THISINFO)printf("StartCAN_485Srever,open stream_max485 file success!\r\n");
-	}
-	if(!iofile) {
-		if(THISERROR)printf("StartCAN_485Srever,open relayctl file failed!\r\n");
-		return ;
-	} else {
-		if(THISINFO)printf("StartCAN_485Srever,open relayctl file success!\r\n");
-	}
-
-    _ioctl(_fileno(stream_max485), UART_SETSPEED, &baud);
+    _ioctl(_fileno(sys_varient.stream_max485), UART_SETSPEED, &baud);
 	baud = 5; //10ms
-	_ioctl(_fileno(stream_max485), UART_SETREADTIMEOUT, &baud);
-    NutThreadCreate("thread_can485_read",  thread_can485_read, 0, 1024);
+	_ioctl(_fileno(sys_varient.stream_max485), UART_SETREADTIMEOUT, &baud);
+    NutThreadCreate("thread_can485_read",  thread_can485_read, 0, 512);
 }
 
 

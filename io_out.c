@@ -46,10 +46,12 @@
 #include "time_handle.h"
 #include "io_time_ctl.h"
 #include <dev/relaycontrol.h>
+#include "sys_var.h"
+#include "debug.h"
 
 
-#define THISINFO          DEBUG_ON_INFO
-#define THISERROR         DEBUG_ON_ERROR
+#define THISINFO          0
+#define THISERROR         0
 
 
 #define  IO_OUT_COUNT_MAX            32
@@ -128,6 +130,7 @@ void BspIoOutInit(void)
 #endif
 	}
 #endif
+
 }
 
 uint32_t GetIoOut(void)
@@ -371,6 +374,33 @@ void IoOutTimeTickUpdateServer(void)
 extern void check_app(void);
 extern void check_get_mac_address(unsigned char * mac);
 
+#if  1
+//应客户需求，实现以下想法
+#if 0
+8路全开与全关功能定义：
+
+1：上位机软件对于全开和全关功能不涉及时序问题。即是说，如果上位机软件需要时序开和关，必须上位机软件实现。
+
+2：输出全开和全关对应输入端口的第7、第8路的输入控制。
+
+3：当第7路有信号输入，继电器发生时序开的功能。不管第8路是否有信号
+
+3：当第7路信号保持输入，不影响开关状态。
+
+4：当第7路信号撤去信号，不影响开关状态。
+
+5：当第8路有信号输入，继电器发生时序关的功能。不管第7路是否有信号
+
+6：当第8路信号保持输入，不影响开关状态。
+
+7：当第8路信号撤去信号，不影响开关状态。
+
+8: 当第7路第8路同时有信号输入，发生时序关功能。
+
+9：两路的输入信号延时滤波控制在100毫秒内，小于100毫秒的干扰信号，认为无信号输入。
+#endif
+#endif
+
 void io_out_ctl_thread_server(void)
 {
 	int rc = -1;
@@ -378,16 +408,12 @@ void io_out_ctl_thread_server(void)
 	uint16_t count = 0;
 	uint8_t  led = 0;
 	unsigned char buffer[16];
+	unsigned char io_in_8ch,io_in_8ch_last;
+	unsigned char timing_open_off_count = 128;  //如果小于128，则需要打开，如果大于128，则需要关闭
+	unsigned char timing_delay_count = 0;
 
-	FILE * iofile = fopen("relayctl", "w+b");
 
-	if(iofile) {
-		if(THISINFO)printf("fopen relayctl succ.\r\n");
-	} else {
-		if(THISINFO)printf("fopen relayctl failed.\r\n");
-	}
-
-	rc = _ioctl(_fileno(iofile), GET_OUT_NUM, &outnum);
+	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &outnum);
 
 	if(!rc) {
 		if(THISINFO)printf("fopen relayctl succ.\r\n");
@@ -396,7 +422,7 @@ void io_out_ctl_thread_server(void)
 	}
 
 
-	_ioctl(_fileno(iofile), GET_IN_NUM, &innum);
+	_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &innum);
 	
 	if(THISINFO)printf("IOCTL:inputnum(%d),outputnum(%d).\r\n",(int)innum,(int)outnum);
 
@@ -404,8 +430,9 @@ void io_out_ctl_thread_server(void)
 	timing_init();
 #endif
 
-	_ioctl(_fileno(iofile), IO_IN_GET, buffer);
-	input_filter[0] = input_flag[0] = last_input = buffer[0];
+	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
+	io_in_8ch_last = io_in_8ch = input_filter[0] = input_flag[0] = last_input = buffer[0];
+	
 	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input,io_out[0]);
 
     while(1) {
@@ -413,15 +440,81 @@ void io_out_ctl_thread_server(void)
 		io_scan_timing_server();
 #endif
 		if(innum) {//输入控制
-		    _ioctl(_fileno(iofile), IO_IN_GET, buffer);
+		    _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
+			io_in_8ch = buffer[0] & (0x3<<6);
 	        GetFilterInputServer(buffer,innum);
 	        IoInputToControlIoOutServer();
+			//应客户需求，在这里指定第7路输入控制全开，第8路输入控制全关
+#if 0   //客户指定的时序开和时序功能，这里直接屏蔽，主线不需要这个功能。
+			if(io_in_8ch_last != io_in_8ch) {
+				unsigned char diff = io_in_8ch_last ^ io_in_8ch;
+				if(diff == (0x3<<6)) { //两个都变化
+					if(io_in_8ch & (0x3<<6)) { //两个同时又输入触发信号
+						if(timing_open_off_count <= 128) {
+						    timing_open_off_count = 128+8;
+							timing_delay_count = 0;
+							DEBUGMSG(THISINFO,("close2 timing all close\r\n"));
+						}
+					}
+				} else if(diff & (1<<6)) { //第7路不同
+					if(io_in_8ch & (1<<6)) {  //第8路有触发信号,全开
+						if(timing_open_off_count >= 128) {
+						    timing_open_off_count = 128-8;
+							timing_delay_count = 0;
+							DEBUGMSG(THISINFO,("open timing all open\r\n"));
+						}
+					}
+				} else if(diff & (1<<7)) {//第8路不同
+					if(io_in_8ch & (1<<7)) {  //第8路有触发信号,全关
+						if(timing_open_off_count <= 128) {
+						    timing_open_off_count = 128+8;
+							timing_delay_count = 0;
+							DEBUGMSG(THISINFO,("close timing all close\r\n"));
+						}
+					}
+				} else {
+				}
+				io_in_8ch_last = io_in_8ch;
+			} else {
+				//无变化
+			}
+			//根据变化动作
+			if(timing_open_off_count != 128) {
+				//根据方向，动作
+				
+				if(timing_open_off_count < 128) {
+					unsigned char buffer[2];
+					unsigned char diff = 128 - timing_open_off_count - 1;
+					diff = 7 - diff;
+					//时序开
+					buffer[0] = (unsigned char)(diff & 0xFF);
+					buffer[1] = (unsigned char)(diff>>8);
+					_ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buffer);
+					if(++timing_delay_count >= 100) {
+					    timing_open_off_count++;
+						timing_delay_count = 0;
+						DEBUGMSG(THISINFO,("             set bit ...\r\n"));
+					}
+				} else if(timing_open_off_count > 128) {
+					unsigned char buffer[2];
+					unsigned char diff = timing_open_off_count - 128 - 1;
+					//diff = 7 - diff;
+					//时序关
+					buffer[0] = (unsigned char)(diff & 0xFF);
+					buffer[1] = (unsigned char)(diff>>8);
+					_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buffer);
+					if(++timing_delay_count >= 100) {
+					    timing_open_off_count--;
+						timing_delay_count = 0;
+						DEBUGMSG(THISINFO,("             clr bit ...\r\n"));
+					}
+				}
+			} else {
+				timing_delay_count = 0;
+			}
+#endif
 		}
 		IoOutTimeTickUpdateServer();
-		//执行控制
-
-		//_ioctl(_fileno(iofile), IO_OUT_SET, io_out);
-
 		//等待10ms到来
 		NutSemWait(&sys_10ms_sem);
 		//
@@ -451,7 +544,7 @@ THREAD(io_out_ctl_thread, arg)
 
 void StartIoOutControlSrever(void)
 {
-    NutThreadCreate("io_out_ctl_thread",  io_out_ctl_thread, 0, 1024);
+    NutThreadCreate("io_out_ctl_thread",  io_out_ctl_thread, 0, 780);
 }
 
 
