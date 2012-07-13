@@ -7,6 +7,8 @@
 <!--
 .STYLE2 {font-size: 0px}
 .STYLE3 {font-size: 12px; }
+table{ background:#000;}
+table tr td{ background:#fff;}
 -->
 </style>
 </head>
@@ -196,30 +198,28 @@ function  body_load()
 
 <body onload= "body_load() ">
 <form name="question_form">
-  <table border="1" align="center" cellspacing="1">
+  <table  align="center"  border="0" cellspacing="1" cellpadding="0">
     <tr>
       <td colspan="2"><div align="center">远程开关电源控制<div id='infochout'></div></div></td>
     </tr>
     <tr>
       <td colspan="2"><div align="center">
-          <input type="checkbox" name = "led1">第1路 </div></td>
+          <input type="checkbox" name = "led1">第01路 </div></td>
     </tr>
     <tr>
       <td colspan="2"><div align="center">
-        <input type="checkbox" name = "led2">
-第2路</div></td>
+        <input type="checkbox" name = "led2">第02路</div></td>
     </tr>
     <tr>
-      <td width="115"><div align="center" class="STYLE2">
+      <td width="119"><div align="center" class="STYLE2">
           <input name="button" type ="button" onClick ="queryalloutRequest();return true;" value="查询">
       </div></td>
-      <td width="103"><div align="center" class="STYLE2">
+      <td width="119"><div align="center" class="STYLE2">
         <input name="bottom_set" type ="button" id="bottom_set" onClick ="SetiovalueRequest();return true;" value="设置">
       </div></td>
     </tr>
     <tr>
-      <td colspan="2"><div id='ResponseDiv'>
-          <div align="left">...</div>
+      <td colspan="2"><div align="center"><div id='ResponseDiv'>...</div>
       </div></td>
     </tr>
     <tr>

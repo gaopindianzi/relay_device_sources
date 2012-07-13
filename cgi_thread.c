@@ -481,7 +481,9 @@ int handle_user_quest(FILE * stream, REQUEST * req)
 				if(strcmp(value,gpassword) == 0) {
 					fputs_P(PSTR("登陆成功<br />"),stream);
 					fputs_P(PSTR("<a href=""/io_out_control.html"">进入控制界面</a><br /><br />"),stream);
+#ifdef APP_HTTP_PROTOTOL_CLIENT
 					fputs_P(PSTR("<a href=""/main.html"">进入管理界面</a><br /><br />"),stream);
+#endif
 					fputs_P(PSTR("修改密码<br /><br />"),stream);
 					fputs_P(form_change_password,stream);
 					fputs_P(PSTR("<a href=""/index.html"">返回登陆界面</a><br />"),stream);
