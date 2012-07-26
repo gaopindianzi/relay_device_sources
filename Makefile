@@ -34,9 +34,9 @@ BSP_BOARD_TYPE = $(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
 MAC0 = 00
 MAC1 = 06
 MAC2 = 98
-MAC3 = 42
-MAC4 = 05
-MAC5 = 95
+MAC3 = 8E
+MAC4 = 55
+MAC5 = B3
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
@@ -48,6 +48,7 @@ APP_CGI_ON = ON
 APP_485_ON = ON
 APP_MODBUS_TCP_ON  = ON
 APP_MULTI_MANGER_FRAME = ON
+#删除ON，PHP功能就取消
 APP_HTTP_PROTOTOL_CLIENT = ON
 #------------------------------------------------------------------------------
 

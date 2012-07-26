@@ -219,6 +219,7 @@ int main(void)
 		BspWriteWebPassword(gpassword);
 		BspWriteWebPassword(gpassword);
 		//初始化HTTP_CLIENT参数
+#ifdef APP_HTTP_PROTOTOL_CLIENT		
 		strcpy(sys_info.id,"20120701000");
 		strcpy(sys_info.host_addr,"pxwkoo.hk91.hqidc.net");
 		strcpy(sys_info.web_page,"relay_server.php");
@@ -227,6 +228,7 @@ int main(void)
 		sys_info.factory_mode = 0;
 		save_relay_info(&sys_info);
 		//保存更新
+#endif		
 		BspWriteFactoryOut(0x55);
 		BspWriteFactoryOut(0x55);
 	} else {

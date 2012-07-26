@@ -285,9 +285,12 @@ extern unsigned char switch_input_control_mode[32];
 #define BSP_FACTORY_OUT_OFFSET          (BSP_MULTI_MANGER_DATA_OFFSET + sizeof(device_info_st))
 
 
+#ifdef APP_HTTP_PROTOTOL_CLIENT
 #define BSP_HTTP_CLIENT_INFO_OFFSET     (BSP_FACTORY_OUT_OFFSET + 1)
-
 #define BSP_MAX_OFFSET                  (BSP_HTTP_CLIENT_INFO_OFFSET + sizeof(ethernet_relay_info))  //在前面的基础上，增加前面的大小
+#else
+#define BSP_MAX_OFFSET                  (BSP_FACTORY_OUT_OFFSET + 1)
+#endif
 
 
 
