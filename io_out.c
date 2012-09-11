@@ -50,8 +50,8 @@
 #include "debug.h"
 
 
-#define THISINFO          0
-#define THISERROR         0
+#define THISINFO          1
+#define THISERROR         1
 
 
 #define  IO_OUT_COUNT_MAX            32
@@ -423,7 +423,7 @@ void io_out_ctl_thread_server(void)
 
 
 	_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &innum);
-	
+
 	if(THISINFO)printf("IOCTL:inputnum(%d),outputnum(%d).\r\n",(int)innum,(int)outnum);
 
 #ifdef APP_TIMEIMG_ON

@@ -23,11 +23,13 @@ EXT_BOARD_IS_16CHOUT           =  4
 EXT_BOARD_IS_4CHIN_4CHOUT    =    5
 #带光耦的8路输入，8路输出
 EXT_BOARD_IS_8CHIN_8CHOUT_V2  =   9  
+#30安16进16出带串口和485的继电器控制板
+RELAY_PLATFORM_16CHIN_16CHOUT_30A = 10
 #以太网服务器远程复位开关控制卡
-RELAY_PLATFORM_16CHOUT_HOST_RESET = 10
+RELAY_PLATFORM_16CHOUT_HOST_RESET = 11
 #
 #定义当前需要编译的板类型
-BSP_BOARD_TYPE = $(EXT_BOARD_IS_2CHIN_2CHOUT_BOX)
+BSP_BOARD_TYPE = $(EXT_BOARD_IS_16CHOUT)
 
 #
 #发布MAC地址
@@ -36,25 +38,31 @@ MAC1 = 06
 MAC2 = 98
 MAC3 = 8E
 MAC4 = 55
-MAC5 = B3
+MAC5 = 79
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
 HWDEF += -DBOARD_TYPE_MODEL=$(BSP_BOARD_TYPE)
 
-#定义一些模块开关
+#定义一些模块开关，删除ON，就取消某功能
 APP_TIMEIMG_ON = ON
 APP_CGI_ON = ON
 APP_485_ON = ON
 APP_MODBUS_TCP_ON  = ON
 APP_MULTI_MANGER_FRAME = ON
 #删除ON，PHP功能就取消
-APP_HTTP_PROTOTOL_CLIENT = ON
+APP_HTTP_PROTOTOL_CLIENT = 
 #------------------------------------------------------------------------------
 
 
-#------------------------------------------------------------------------------
 
+
+
+
+
+
+#以下脚本不能随意更改
+#------------------------------------------------------------------------------
 
 MAC_STRING = $(MAC0)_$(MAC1)_$(MAC2)_$(MAC3)_$(MAC4)_$(MAC5)
 
@@ -86,11 +94,18 @@ WEBDIR  = web_16ch
 HEX_FILE = 16ch_$(MAC_STRING)
 endif
 
+ifeq ($(BSP_BOARD_TYPE),$(RELAY_PLATFORM_16CHIN_16CHOUT_30A))
+HWDEF += -DBOARD_TYPE=$(RELAY_PLATFORM_16CHIN_16CHOUT_30A)
+SYS_HAVE_485 = ON
+WEBDIR  = web_16ch
+HEX_FILE = 16in_16out_$(MAC_STRING)
+endif
+
 
 ifeq ($(BSP_BOARD_TYPE),$(RELAY_PLATFORM_16CHOUT_HOST_RESET))
 HWDEF += -DBOARD_TYPE=$(EXT_BOARD_IS_16CHOUT)
 WEBDIR  = web_16ch
-HEX_FILE = 16ch_host_reset_$(MAC_STRING)
+HEX_FILE = host_reset_16out_$(MAC_STRING)
 endif
 
 

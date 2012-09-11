@@ -103,33 +103,6 @@
 #define NICINB(reg)         (*((volatile uint8_t *)0x8300 + reg))
 
 
-#if  0 //测试宏定义
-#if BOARD_TYPE   ==  EXT_BOARD_IS_2CHIN_2CHOUT_BOX
-#error  "EXT_BOARD_IS_2CHIN_2CHOUT_BOX test successful"
-#endif
-
-#if BOARD_TYPE   ==  EXT_BOARD_IS_4CHIN_4CHOUT
-#error  "EXT_BOARD_IS_4CHIN_4CHOUT test successful"
-#endif
-
-#if BOARD_TYPE   ==  EXT_BOARD_IS_8CHIN_8CHOUT_V2
-#error  "EXT_BOARD_IS_8CHIN_8CHOUT_V2 test successful"
-#endif
-
-#if BOARD_TYPE   ==  EXT_BOARD_IS_16CHOUT
-#error  "EXT_BOARD_IS_16CHOUT test successful"
-#endif
-
-
-#endif
-
-
-#ifdef SYS_DEFAULT_MAC
-//#error SYS_DEFAULT_MAC
-#endif
-
-
-
 //多管理设备信息
 extern device_info_st    multimgr_info;
 //

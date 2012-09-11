@@ -47,11 +47,16 @@
 #include "io_time_ctl.h"
 #include "time_handle.h"
 #include "io_out.h"
-
 #include "bsp.h"
 
-#define THISINFO      DEBUG_ON_INFO
-#define THISERROR     DEBUG_ON_ERROR
+#include "debug.h"
+
+
+#define THISINFO      0
+#define THISERROR     0
+#define THISASSERT    0
+
+#define ASSERT_MSG(on,str)    ASSERT(on)
 
 
 void TimingEepromToNode(timing_node * pio,timing_node_eeprom * pe)

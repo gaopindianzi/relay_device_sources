@@ -56,9 +56,9 @@
 
 #include "debug.h"
 
-#define THISINFO        0
-#define THISERROR       0
-#define THISASSERT      0
+#define THISINFO        1
+#define THISERROR       1
+#define THISASSERT      1
 
 #define   DEFAULT_WORK_PORT       505
 
@@ -172,7 +172,6 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	pst->device_time[0] = time.sec;
 	//MACµÿ÷∑
 	{
-		//u_char de_mac[] = SYS_DEFAULT_MAC;
 		memcpy(pst->mac,confnet.cdn_mac,6);
 	}
 	//∂¡IPµÿ÷∑
@@ -267,6 +266,9 @@ void prase_multimgr_rx_data(UDPSOCKET * socket,uint32_t addr,uint16_t port,unsig
 		{
 			unsigned int crc;
 			const unsigned int elen = sizeof(modbus_command_st) + sizeof(modbus_tcp_head);
+
+			dumpdata(pst,len);
+
 			modbus_command_st * mst = (modbus_command_st *)pst;
 			modbus_tcp_head * mhead;
 			//DEBUGMSG(THISINFO,("call CMD_MODBUSPACK_SEND.\r\n"));

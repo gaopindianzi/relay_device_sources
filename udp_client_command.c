@@ -50,8 +50,8 @@
 #include "bsp.h"
 
 
-#define THISINFO       DEBUG_ON_INFO
-#define THISERROR      DEBUG_ON_ERROR
+#define THISINFO       0
+#define THISERROR      0
 
 #ifdef USE_AUTO_CONFIG
 
@@ -144,106 +144,6 @@ typedef struct _MUSTER_TELE_V2 {
 
 } MUSTER_TELE_V2;
 
-
-static uint8_t buffer[sizeof(MUSTER_TELE)];
-
-
-#if  0
-THREAD(udp_auto_config_thread, arg)
-{
-	const uint16_t length = sizeof(buffer);
-	uint32_t addr = 0;
-	uint16_t port = 0;
-	UDPSOCKET * socket = NULL;
-
-    NutThreadSetPriority(AUTO_CONFIG_THREAD_PRI);
-	if(THISINFO)printf("UDP Auto Config Server Started!\r\n");
-	socket = NutUdpCreateSocket(UDP_AUTO_CONFIG_PORT);
-	NutUdpSetSockOpt(socket, SO_RCVBUF, &length, sizeof(length));
-    while(socket)
-	{
-		//NutUdpReceiveFrom(UDPSOCKET *sock, uint32_t *addr, uint16_t *port, void *data, int size, uint32_t timeout);
-		int ret = NutUdpReceiveFrom(socket,&addr,&port,buffer,length,1000);
-		if(ret < 0) {
-			if(THISINFO)printf("UDP Receive error!\r\n");
-		} else if(ret == 0) {
-			//if(THISINFO)printf("UDP Receive 0\r\n");
-		} else {
-		    if(THISINFO)printf("UDP Receive %d bytes\r\n",ret);
-			//解析包
-			if(ret >= sizeof(MUSTER_TELE)) {
-				MUSTER_TELE * recbuf = (MUSTER_TELE *)buffer;
-				if(recbuf->msg_type == 0) {
-					//配置结构体
-					u_char use_mac[] = SYS_DEFAULT_MAC;
-					CmdIpConfigData ipconfig;
-					if(THISINFO)printf("Get Ip Config\r\n");
-					memset(recbuf,0,sizeof(MUSTER_TELE));
-					BspReadIpConfig(&ipconfig);
-					recbuf->msg_type = 1;
-					recbuf->muster_ver = 1;
-					strcpy(recbuf->net_hostname,"EthRelay");
-					memcpy(recbuf->net_mac,use_mac,6);
-					recbuf->net_ip_addr  = ipconfig.ipaddr[3];recbuf->net_ip_addr<<=8;
-					recbuf->net_ip_addr |= ipconfig.ipaddr[2];recbuf->net_ip_addr<<=8;
-					recbuf->net_ip_addr |= ipconfig.ipaddr[1];recbuf->net_ip_addr<<=8;
-					recbuf->net_ip_addr |= ipconfig.ipaddr[0];
-					recbuf->net_ip_mask  = ipconfig.netmask[3];recbuf->net_ip_mask<<=8;
-					recbuf->net_ip_mask |= ipconfig.netmask[2];recbuf->net_ip_mask<<=8;
-					recbuf->net_ip_mask |= ipconfig.netmask[1];recbuf->net_ip_mask<<=8;
-					recbuf->net_ip_mask |= ipconfig.netmask[0];
-					recbuf->firstport = ipconfig.port;
-					recbuf->workmodel = 2; //client模式
-					recbuf->portnum = 1;
-					strcpy(recbuf->firmware,"Ver1.0.0");
-					strcpy(recbuf->cfgpwd,"12345678");
-					recbuf->mapip[0]   = recbuf->net_ip_addr;
-					recbuf->mapport[0] = recbuf->firstport;
-					//NutUdpSendTo(UDPSOCKET *sock, uint32_t addr, uint16_t port, void *data, int len);
-					NutUdpSendTo(socket,addr,port,recbuf,length);
-				} else if(recbuf->msg_type == 3) {
-					//配置
-					CmdIpConfigData ipconfig;
-					if(THISINFO)printf("Set Ip Config\r\n");
-					ipconfig.ipaddr[0] = (uint8_t)(((recbuf->net_ip_addr>>0)&0xFF));
-					ipconfig.ipaddr[1] = (uint8_t)(((recbuf->net_ip_addr>>8)&0xFF));
-					ipconfig.ipaddr[2] = (uint8_t)(((recbuf->net_ip_addr>>16)&0xFF));
-					ipconfig.ipaddr[3] = (uint8_t)(((recbuf->net_ip_addr>>24)&0xFF));
-					ipconfig.netmask[0] = (uint8_t)(((recbuf->net_ip_mask>>0)&0xFF));
-					ipconfig.netmask[1] = (uint8_t)(((recbuf->net_ip_mask>>8)&0xFF));
-					ipconfig.netmask[2] = (uint8_t)(((recbuf->net_ip_mask>>16)&0xFF));
-					ipconfig.netmask[3] = (uint8_t)(((recbuf->net_ip_mask>>24)&0xFF));
-					ipconfig.gateway[0] = (uint8_t)(((recbuf->net_gateway>>0)&0xFF));
-					ipconfig.gateway[1] = (uint8_t)(((recbuf->net_gateway>>8)&0xFF));
-					ipconfig.gateway[2] = (uint8_t)(((recbuf->net_gateway>>16)&0xFF));
-					ipconfig.gateway[3] = (uint8_t)(((recbuf->net_gateway>>24)&0xFF));
-					ipconfig.dns[0] = ipconfig.gateway[0];
-					ipconfig.dns[1] = ipconfig.gateway[1];
-					ipconfig.dns[2] = ipconfig.gateway[2];
-					ipconfig.dns[3] = ipconfig.gateway[3];
-					ipconfig.port = (uint16_t)recbuf->firstport;
-					ipconfig.webport = (uint16_t)80;
-					//
-					if(!BspWriteIpConfig(&ipconfig)) {
-						//重启
-						//RequestSystemReboot(); //已经调用了
-					} else {
-						if(!BspWriteIpConfig(&ipconfig)) {
-							//重启
-							//RequestSystemReboot();
-						} else {
-							//失败
-						}
-					}
-				}
-			}
-		}
-	}
-	NutUdpDestroySocket(socket);
-	return 0;
-}
-
-#endif
 
 THREAD(udp_cmd_thread, arg)
 {

@@ -44,8 +44,8 @@
 
 #include "bsp.h"
 
-#define THISINFO           DEBUG_ON_INFO
-#define THISERROR          DEBUG_ON_ERROR
+#define THISINFO           0
+#define THISERROR          0
 
 
 //
@@ -192,10 +192,12 @@ int BspManualCtlModeInit(void)
 	return ret;
 }
 
+#include "bsp.h"
+
 int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode)
 {
 	int ret  = 0;
-	if(index >= 8) {
+	if(index >= INPUT_CHANNEL_NUM) {
 		return -1;
 	}
 	ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+index,&switch_input_control_mode[index],1);
@@ -206,7 +208,7 @@ int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode)
 
 int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode)
 {
-	if(index >= 8) {
+	if(index >= INPUT_CHANNEL_NUM) {
 		return -1;
 	}
 	switch_input_control_mode[index] = mode;

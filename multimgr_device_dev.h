@@ -46,7 +46,7 @@ typedef struct __modbus_command_st
 {
 	unsigned char command;
     unsigned char crc[2]; //对以下内容进行CRC校验
-    unsigned char command_len;
+	unsigned char command_len;
 } modbus_command_st;
 
 #define  GET_MODBUS_COMMAND_DATA(ptr)   ((void *)(((unsigned char *)(ptr))+sizeof(modbus_command_st)))

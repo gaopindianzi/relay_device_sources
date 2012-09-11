@@ -43,8 +43,8 @@
 
 #include "bsp.h"
 
-#define THISINFO           DEBUG_ON_INFO
-#define THISERROR          DEBUG_ON_ERROR
+#define THISINFO           0
+#define THISERROR          0
 
 
 MUTEX       sys_time_lock;

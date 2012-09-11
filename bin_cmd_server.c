@@ -50,8 +50,8 @@
 #include "sys_var.h"
 #include "bsp.h"
 
-#define THISINFO          DEBUG_ON_INFO
-#define THISERROR         DEBUG_ON_ERROR
+#define THISINFO          1
+#define THISERROR         1
 
 
 int BspReadBoardInfo(CmdBoardInfo * info);
@@ -223,7 +223,6 @@ int CmdSetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 int CmdRevertIoOutIndex(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 {
 	int rc = -1;
-	//uint32_t tmp;
 	const uint8_t outsize = sizeof(CmdIobitmap);
 	uint8_t  buffer[sizeof(CmdHead)+outsize];
     CmdHead          * tcmd  = (CmdHead *)buffer;
@@ -237,21 +236,8 @@ int CmdRevertIoOutIndex(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     }
     //
     tcmd->cmd_option    = CMD_ACK_OK;	
-	//tmp = group_arry4_to_uint32(io->io_msk);
-    //if(tmp) {
-		//if(THISINFO)printf("Cmd Sig 8-16 is 0x%x\r\n",io->io_msk[1]);
-	    //RevertRelayWithDelay(tmp);
 	rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, io->io_msk);
-	   //È¡»Ø
-	//} else {
-		//if(THISINFO)printf("Cmd Sig None,some error!\r\n");
-	//}
 	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_msk);
-	//tmp =  GetIoOut();
-	//sio->io_msk[0] = (tmp & 0xFF);
-	//sio->io_msk[1] = (tmp >> 8) & 0xFF;
-	//sio->io_msk[2] = (tmp >> 16) & 0xFF;;
-	//sio->io_msk[3] = (tmp >> 24) & 0xFF;
 error:
     tcmd->cmd           = CMD_REV_IO_SOME_BIT;
     tcmd->cmd_index     = cmd->cmd_index;
