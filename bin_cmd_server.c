@@ -50,8 +50,8 @@
 #include "sys_var.h"
 #include "bsp.h"
 
-#define THISINFO          1
-#define THISERROR         1
+#define THISINFO          0
+#define THISERROR         0
 
 
 int BspReadBoardInfo(CmdBoardInfo * info);

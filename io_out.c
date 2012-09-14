@@ -50,8 +50,8 @@
 #include "debug.h"
 
 
-#define THISINFO          1
-#define THISERROR         1
+#define THISINFO          0
+#define THISERROR         0
 
 
 #define  IO_OUT_COUNT_MAX            32
@@ -63,7 +63,7 @@ const uint32_t  code_msk[32] = {0x01,0x02,0x04,0x08,0x10UL,0x20UL,0x40UL,0x80UL,
                                 0x10000UL,0x20000UL,0x40000UL,0x80000UL,0x100000UL,0x200000UL,0x400000UL,0x800000UL,0x1000000UL,0x2000000UL,0x4000000UL,0x8000000UL,
                                 0x10000000UL,0x20000000UL,0x40000000UL,0x80000000UL};
 
-uint32_t      last_input                        __attribute__ ((section (".noinit")));
+unsigned char last_input[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
 unsigned char input_flag[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
 unsigned char input_filter[IO_IN_COUNT_MAX/8]   __attribute__ ((section (".noinit")));
 unsigned char input_hold[IO_IN_COUNT_MAX]       __attribute__ ((section (".noinit")));
@@ -113,70 +113,38 @@ void BspIoInInit(void)
 	for(i=0;i<IO_IN_COUNT_MAX;i++) {
 		input_hold[i] = 0xFF;
 	}
-	input_flag[0] = 0;
-	input_filter[0] = 0;
+	memset(input_flag,0,sizeof(input_flag));
+	memset(input_filter,0,sizeof(input_filter));
 }
 
-void BspIoOutInit(void)
-{
-#if 0  //IO_OUT 不在这这里干了
-	uint8_t i;
-	for(i=0;i<IO_OUT_COUNT_MAX/8;i++) {
-		switch_signal_hold_time[i] = 0;
-#ifdef DEFINE_POWER_RELAY_OLL_ON
-		io_out[i] = 0xFF;
-#else
-		io_out[i] = 0;
-#endif
-	}
-#endif
-
-}
-
-uint32_t GetIoOut(void)
-{
-	uint32_t out = io_out[3];
-	out <<= 8;
-	out |= io_out[2];
-	out <<= 8;
-	out |= io_out[1];
-	out <<= 8;
-	out |= io_out[0];
-	return out;
-}
-
-uint32_t GetFilterInput(void)
-{
-	uint32_t out = input_filter[0];
-	return out;
-}
 
 void GetFilterInputServer(unsigned char * buffer,uint32_t inputnum)
 {
 	
 	unsigned char i;
-	//uint32_t last_input = group_arry4_to_uint32(input_filter);
-	uint32_t input  = group_arry4_to_uint32(buffer);
 
 	for(i=0;i<inputnum;i++) {
-		if(input&code_msk[i]) {
-			if(input_flag[i/8]&code_msk[i%8]) {
+		unsigned char by = i / 8;
+		unsigned char bi = i % 8;
+		unsigned char msk = code_msk[bi];
+		if(buffer[by]&msk) {
+			if(input_flag[by]&msk) {
 				//保持
 				if(input_hold[i] < 0xFF) {
 					++input_hold[i];
 				}
 				if(input_hold[i] == INPUT_HOLD_COUNT) {
-					input_filter[0] |=  code_msk[i];
+					input_filter[by] |=  msk;
 				}
 			} else {
 				//刚按下
-				input_flag[0] |= code_msk[i];
+				input_flag[by] |= msk;
 				input_hold[i] = 0;
 			}
 		} else {
-			if(input_flag[0]&code_msk[i]) {
+			if(input_flag[by]&msk) {
 				//刚松开
-				input_flag[0] &= ~code_msk[i];
+				input_flag[by] &= ~msk;
 				input_hold[i] = 0;
 			} else {
 				//空闲
@@ -184,7 +152,7 @@ void GetFilterInputServer(unsigned char * buffer,uint32_t inputnum)
 					++input_hold[i];
 				}
 				if(input_hold[i] == INPUT_HOLD_COUNT) {
-					input_filter[0] &= ~code_msk[i];
+					input_filter[by] &= ~msk;
 				}
 			}
 		}
@@ -260,13 +228,15 @@ unsigned char GetInputCtrlMode(unsigned char index)
 
 void IoInputToControlIoOutServer(void)
 {
-  unsigned char i;
-  uint32_t input = GetFilterInput();
-  for(i=0;i<8;i++) {
+	unsigned char i;
+  for(i=0;i<32;i++) {
+	  unsigned char by = i / 8;
+	  unsigned char bi = i % 8;
+	  unsigned char msk = code_msk[bi];
       //遍历没一路
-	  if(io_input_on_msk[0]&code_msk[i]) { //如果此路是受控的。
-		  if(input&code_msk[i]) { //如果输入是正的。
-			  if(last_input&code_msk[i]) { //上一次是正的
+	  if(io_input_on_msk[by]&msk) { //如果此路是受控的。
+		  if(input_filter[by]&msk) { //如果输入是正的。
+			  if(last_input[by]&msk) { //上一次是正的
 	              //输入保持
 	              switch(GetInputCtrlMode(i))  //根据模式变化
 	              {
@@ -286,7 +256,7 @@ void IoInputToControlIoOutServer(void)
 	                  break;
 	              }
 	            } else { //按下
-	              last_input |= code_msk[i];
+	              last_input[by] |= msk;
 	              switch(GetInputCtrlMode(i))
 	              {
 	              case INPUT_SINGLE_TRIGGER_MODE:
@@ -311,8 +281,8 @@ void IoInputToControlIoOutServer(void)
 	              }
 	            }
               } else {
-	            if(last_input&code_msk[i]) { //抬起
-	              last_input &= ~code_msk[i];
+	            if(last_input[by]&msk) { //抬起
+	              last_input[by] &= ~msk;
 	              switch(GetInputCtrlMode(i))
 	              {
 	              case INPUT_TRIGGER_FLIP_MODE:
@@ -431,9 +401,12 @@ void io_out_ctl_thread_server(void)
 #endif
 
 	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
-	io_in_8ch_last = io_in_8ch = input_filter[0] = input_flag[0] = last_input = buffer[0];
+	io_in_8ch_last = io_in_8ch = input_filter[0] = input_flag[0] = last_input[0] = buffer[0];
+	input_filter[1] = input_flag[1] = last_input[1] = buffer[1];
+	input_filter[2] = input_flag[2] = last_input[2] = buffer[2];
+	input_filter[3] = input_flag[3] = last_input[3] = buffer[3];
 	
-	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input,io_out[0]);
+	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input[0],io_out[0]);
 
     while(1) {
 #ifdef APP_TIMEIMG_ON
@@ -441,7 +414,9 @@ void io_out_ctl_thread_server(void)
 #endif
 		if(innum) {//输入控制
 		    _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
+
 			io_in_8ch = buffer[0] & (0x3<<6);
+
 	        GetFilterInputServer(buffer,innum);
 	        IoInputToControlIoOutServer();
 			//应客户需求，在这里指定第7路输入控制全开，第8路输入控制全关

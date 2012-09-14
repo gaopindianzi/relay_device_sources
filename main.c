@@ -323,7 +323,6 @@ int main(void)
 		//¸´Î»
 		if(THISINFO)printf("Ext reset init io out.\r\n");
 		BspIoInInit();
-		BspIoOutInit();
 #ifdef  ONE_273_INPUT_MODE
 	    bsp_input_output_init();
 #endif

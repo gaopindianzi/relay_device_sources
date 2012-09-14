@@ -2,6 +2,8 @@
 #define __NUT_BSP_H__
 
 
+#undef  RELAY_PLATFORM_16CHIN_16CHOUT_30A
+
 #define  EXT_BOARD_IS_2CHIN_2CHOUT_BOX       6
 #define  EXT_BOARD_IS_16CHOUT                4
 #define  EXT_BOARD_IS_4CHIN_4CHOUT           5
@@ -38,7 +40,7 @@
 #define INPUT_LEVEL_HITH_VALID
 #endif
 
-#if BOARD_TYPE == RELAY_PLATFORM_16CHIN_16CHOUT_30A
+#ifdef RELAY_PLATFORM_16CHIN_16CHOUT_30A
 #define INPUT_CHANNEL_NUM        16
 #define OUTPUT_CHANNEL_NUM       16
 #endif
@@ -78,8 +80,6 @@ uint32_t GetFilterInput(void);
 int BspManualCtlModeInit(void);
 int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode);
 int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode);
-
-void BspIoOutInit(void);
 void BspIoInInit(void);
 int BspAvrResetType(void);
 #define AVR_JTAG_RESET         (1<<4)
