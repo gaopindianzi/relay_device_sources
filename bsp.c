@@ -186,7 +186,7 @@ int BspManualCtlModeInit(void)
 {
 	unsigned char i;
 	int ret;
-	for(i=0;i<8;i++) {
+	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
 		ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+i,&switch_input_control_mode[i],1);
 	}
 	return ret;

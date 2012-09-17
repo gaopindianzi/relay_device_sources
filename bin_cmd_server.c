@@ -651,7 +651,7 @@ int CmdGetRtcValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 //--------------------------------------------------------------------------------------------
 //
 //
-
+#if 0
 int CmdSetInputValidMsk(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 {
 	int act_size = 0;
@@ -714,7 +714,7 @@ int CmdGetInputValidMsk(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     tcmd->cmd_index     = cmd->cmd_index;
     return CmdIoFinish(sock,tcmd,act_size);
 }
-
+#endif
 
 #ifdef APP_TIMEIMG_ON
 //--------------------------------------------------------------------------------------------
@@ -875,8 +875,8 @@ const CmdMapToCmdCallType CmdCallMap[] =
 #endif
 	{CMD_SET_RTC_VALUE,CmdSetNewRtcValue},
 	{CMD_GET_RTC_VALUE,CmdGetRtcValue},
-	{CMD_SET_INPUT_CTL_ON_MSK,CmdSetInputValidMsk},
-	{CMD_GET_INPUT_CTL_ON_MSK,CmdGetInputValidMsk},
+	//{CMD_SET_INPUT_CTL_ON_MSK,CmdSetInputValidMsk},
+	//{CMD_GET_INPUT_CTL_ON_MSK,CmdGetInputValidMsk},
 #ifdef APP_TIMEIMG_ON
 	{CMD_SET_TIMING_ON_MSK,CmdSetTimingValidMsk},
 	{CMD_GET_TIMING_ON_MSK,CmdGetTimingValidMsk},

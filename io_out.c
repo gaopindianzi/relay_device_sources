@@ -75,6 +75,7 @@ extern unsigned char switch_signal_hold_time[32];
 extern unsigned char io_out[32/8];
 unsigned char io_input_on_msk[32/8] = {0xFF,0xFF,0xFF,0xFF};
 
+#if 0
 void SetInputOnMsk(uint32_t input_on_msk,uint32_t input_off_msk)
 {
 	io_input_on_msk[0] |= (uint8_t)((input_on_msk >> 0)&0xFF);
@@ -87,6 +88,8 @@ void SetInputOnMsk(uint32_t input_on_msk,uint32_t input_off_msk)
 	io_input_on_msk[2] &= ~(uint8_t)((input_off_msk >> 16)&0xFF);
 	io_input_on_msk[3] &= ~(uint8_t)((input_off_msk >> 24)&0xFF);
 }
+
+
 void GetInputOnMsk(uint32_t * input_on_msk,uint32_t * input_off_msk)
 {
 	*input_on_msk    =  (uint8_t)io_input_on_msk[3];
@@ -105,7 +108,7 @@ void GetInputOnMsk(uint32_t * input_on_msk,uint32_t * input_off_msk)
 	*input_off_msk <<= 8;
 	*input_off_msk  |= (uint8_t)~io_input_on_msk[0];
 }
-
+#endif
 
 void BspIoInInit(void)
 {
@@ -209,27 +212,19 @@ void RevertRelayOneBitWithDelay(unsigned char index)
   }
 }
 
-
-int IsNotSupportIndex(unsigned char index)
-{
-  if(index < IO_OUT_COUNT_MAX) {
-    return -1;
-  }
-  return 0;
-}
-
 unsigned char GetInputCtrlMode(unsigned char index)
 {
-	unsigned char mode = INPUT_TRIGGER_OFF_MODE;
-    if(!IsNotSupportIndex(index)) return INPUT_TRIGGER_OFF_MODE;
-    mode = switch_input_control_mode[index];
-    return mode;
+	if(index < IO_OUT_COUNT_MAX) {
+		return switch_input_control_mode[index];
+	} else {
+		return INPUT_TRIGGER_OFF_MODE;
+	}
 }
 
 void IoInputToControlIoOutServer(void)
 {
 	unsigned char i;
-  for(i=0;i<32;i++) {
+  for(i=0;i<IO_IN_COUNT_MAX;i++) {
 	  unsigned char by = i / 8;
 	  unsigned char bi = i % 8;
 	  unsigned char msk = code_msk[bi];
