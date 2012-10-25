@@ -59,9 +59,7 @@
 #define  INPUT_HOLD_COUNT            5  //
 
 //
-const uint32_t  code_msk[32] = {0x01,0x02,0x04,0x08,0x10UL,0x20UL,0x40UL,0x80UL,0x100,0x200,0x400,0x800,0x1000,0x2000,0x4000,0x8000UL,
-                                0x10000UL,0x20000UL,0x40000UL,0x80000UL,0x100000UL,0x200000UL,0x400000UL,0x800000UL,0x1000000UL,0x2000000UL,0x4000000UL,0x8000000UL,
-                                0x10000000UL,0x20000000UL,0x40000000UL,0x80000000UL};
+const unsigned char  code_msk[8] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
 
 unsigned char last_input[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
 unsigned char input_flag[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
@@ -74,6 +72,182 @@ unsigned char switch_input_control_mode[IO_IN_COUNT_MAX];
 extern unsigned char switch_signal_hold_time[32];
 extern unsigned char io_out[32/8];
 unsigned char io_input_on_msk[32/8] = {0xFF,0xFF,0xFF,0xFF};
+
+unsigned char io_pluase_time_count = 80;
+
+//提供标准的接口，用于触发IO_OUT的时间
+//返回目前的路数
+unsigned int io_out_signal_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	uint32_t tmp;
+	_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+	//参数必须符合条件
+	if(startbits >= tmp || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((tmp - startbits) < bitcount) {
+		bitcount = tmp - startbits;
+	}
+	//开始设置
+	index = 0;
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(iobits[Bb]&code_msk[Bi]) {
+		    switch_signal_hold_time[i] = io_pluase_time_count;
+		}
+		index++;
+	}
+	NutEventPost(&(sys_varient.io_out_event));
+	return bitcount;
+}
+
+//提供标准的接口，用于设置IO_OUT
+//返回目前的路数
+unsigned int io_out_set_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	//uint32_t tmp;
+	//_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+	//参数必须符合条件
+	if(startbits >= OUTPUT_CHANNEL_NUM || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = OUTPUT_CHANNEL_NUM - startbits;
+	}
+	//开始设置
+	printf("io_out_set_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	index = 0;
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(iobits[Bb]&code_msk[Bi]) {
+			io_out[i/8] |=  code_msk[i%8];
+			switch_signal_hold_time[i] = io_pluase_time_count;
+		} else {
+			io_out[i/8] &= ~code_msk[i%8];
+			switch_signal_hold_time[i] = 0;
+		}
+		index++;
+	}
+	NutEventPost(&(sys_varient.io_out_event));
+	return bitcount;
+}
+//提供标准的接口，用于翻转IO_OUT
+//返回目前的路数
+unsigned int io_out_convert_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	//uint32_t tmp;
+	//_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+
+	//printf("get out num = %d\r\n",OUTPUT_CHANNEL_NUM);
+	//参数必须符合条件
+	if(startbits >= OUTPUT_CHANNEL_NUM || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = OUTPUT_CHANNEL_NUM - startbits;
+	}
+	printf("io_out_convert_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//开始设置
+	index = 0;
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(iobits[Bb]&code_msk[Bi]) {
+			io_out[i/8] ^= code_msk[i%8];
+			if(io_out[i/8]&code_msk[i%8]) {
+				switch_signal_hold_time[i] = io_pluase_time_count;
+			} else {
+				switch_signal_hold_time[i] = 0;
+			}
+		}
+		index++;
+	}
+	NutEventPost(&(sys_varient.io_out_event));
+	return bitcount;
+}
+//提供标准的接口，用于读取IO_OUT
+//返回目前的路数
+unsigned int io_out_get_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	//uint32_t tmp;
+
+	memset(iobits,0,(bitcount+7)/8);
+
+	//_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+	//参数必须符合条件
+
+	if(startbits >= OUTPUT_CHANNEL_NUM || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = OUTPUT_CHANNEL_NUM - startbits;
+	}
+	printf("io_out_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//开始设置
+	index = 0;
+	
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(io_out[i/8]&code_msk[i%8]) {
+			iobits[Bb] |=  code_msk[Bi];
+		} else {
+			iobits[Bb] &= ~code_msk[Bi];
+		}
+		index++;
+	}
+	return bitcount;
+}
+unsigned int io_in_get_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	unsigned char buffer[2];
+	//uint32_t tmp;
+
+	memset(iobits,0,(bitcount+7)/8);
+
+	//_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
+	//参数必须符合条件
+	if(startbits >= INPUT_CHANNEL_NUM || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((INPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = INPUT_CHANNEL_NUM - startbits;
+	}
+	printf("io_in_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//开始设置
+	index = 0;
+	//
+	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
+	
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(buffer[i/8]&code_msk[i%8]) {
+			iobits[Bb] |=  code_msk[Bi];
+		} else {
+			iobits[Bb] &= ~code_msk[Bi];
+		}
+		index++;
+	}
+	return bitcount;
+}
 
 #if 0
 void SetInputOnMsk(uint32_t input_on_msk,uint32_t input_off_msk)

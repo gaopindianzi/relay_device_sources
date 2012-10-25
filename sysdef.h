@@ -54,6 +54,7 @@
 
 #define MAIN_RTC_TIME_PRI           100
 #define TCP_BIN_SERVER_PRI          101
+#define IO_EXTEND_THREAD_PRI        TCP_BIN_SERVER_PRI
 #define HTTP_REQUEST_PRI            102
 #define UDP_CLIENT_SERVER_PRI       103
 #define HTTP_SERVER_PRI             150

@@ -56,7 +56,7 @@
 
 #include "debug.h"
 
-#define THISINFO        1
+#define THISINFO        0
 #define THISERROR       1
 #define THISASSERT      1
 
@@ -177,7 +177,7 @@ void broadcast_itself(UDPSOCKET * socket,uint32_t host_addr,uint16_t port,unsign
 	//¶ÁIPµØÖ·
 	{
 		CmdIpConfigData cid;
-		DEBUGMSG(THISINFO,("Write Ipconfig .\r\n"));
+		DEBUGMSG(THISINFO,("read Ipconfig .\r\n"));
 		BspReadIpConfig(&cid);
 		memcpy(pst->local_ip,cid.ipaddr,sizeof(cid.ipaddr));
 		memcpy(pst->net_mask,cid.netmask,sizeof(cid.netmask));

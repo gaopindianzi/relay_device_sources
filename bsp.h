@@ -15,8 +15,8 @@
 
 
 #if BOARD_TYPE == EXT_BOARD_IS_2CHIN_2CHOUT_BOX
-#define INPUT_CHANNEL_NUM        2
-#define OUTPUT_CHANNEL_NUM       2
+#define INTEL_INPUT_CHANNEL_NUM        2
+#define INTEL_OUTPUT_CHANNEL_NUM       2
 //一些特定变更
 #define ONE_273_INPUT_MODE
 #define SWAP_INPUT_PIN12
@@ -24,32 +24,39 @@
 #endif
 
 #if BOARD_TYPE == EXT_BOARD_IS_16CHOUT
-#define INPUT_CHANNEL_NUM        0
-#define OUTPUT_CHANNEL_NUM       16
+#define INTEL_INPUT_CHANNEL_NUM        0
+#define INTEL_OUTPUT_CHANNEL_NUM       16
 #endif
 
 #if BOARD_TYPE == EXT_BOARD_IS_4CHIN_4CHOUT
-#define INPUT_CHANNEL_NUM        4
-#define OUTPUT_CHANNEL_NUM       4
+#define INTEL_INPUT_CHANNEL_NUM        4
+#define INTEL_OUTPUT_CHANNEL_NUM       4
 #define   ONE_273_INPUT_MODE
 #endif
 
 #if BOARD_TYPE == EXT_BOARD_IS_8CHIN_8CHOUT_V2
-#define INPUT_CHANNEL_NUM        8
-#define OUTPUT_CHANNEL_NUM       8
+#define INTEL_INPUT_CHANNEL_NUM        8
+#define INTEL_OUTPUT_CHANNEL_NUM       8
 #define INPUT_LEVEL_HITH_VALID
 #endif
 
 #ifdef RELAY_PLATFORM_16CHIN_16CHOUT_30A
-#define INPUT_CHANNEL_NUM        16
-#define OUTPUT_CHANNEL_NUM       16
+#define INTEL_INPUT_CHANNEL_NUM        16
+#define INTEL_OUTPUT_CHANNEL_NUM       16
 #endif
 
 #if BOARD_TYPE == RELAY_PLATFORM_16CHOUT_HOST_RESET
-#define INPUT_CHANNEL_NUM        0
-#define OUTPUT_CHANNEL_NUM       16
+#define INTEL_INPUT_CHANNEL_NUM        0
+#define INTEL_OUTPUT_CHANNEL_NUM       16
 #endif
 
+
+#ifdef APP_485_EXTOUT
+#define EXT_INPUT_CHANNEL_NUM    0
+#define EXT_OUTPUT_CHANNEL_NUM   16
+#define INPUT_CHANNEL_NUM        (INTEL_INPUT_CHANNEL_NUM + EXT_INPUT_CHANNEL_NUM)
+#define OUTPUT_CHANNEL_NUM       (INTEL_OUTPUT_CHANNEL_NUM + EXT_OUTPUT_CHANNEL_NUM)
+#endif
 
 /*_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_*/
 #include "bin_command_def.h"

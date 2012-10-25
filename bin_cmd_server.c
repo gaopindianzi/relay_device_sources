@@ -54,6 +54,8 @@
 #define THISERROR         0
 
 
+extern const unsigned char  code_msk[8];
+
 int BspReadBoardInfo(CmdBoardInfo * info);
 int BspWriteBoardInfo(CmdBoardInfo * info);
 int BspReadIoName(uint8_t addr[2],CmdIoName * io);
@@ -131,7 +133,7 @@ void bin_cmd_thread_server(void)
 		}
 		NutTcpCloseSocket(sock);
 	}
-thread_stop:
+//thread_stop:
 	while(1)NutSleep(100000);
 }
 
@@ -154,7 +156,7 @@ int CmdGetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	CmdHead       * tcmd  = (CmdHead *)buffer;
 	CmdIoValue    *  sio  = (CmdIoValue *)GET_CMD_DATA(tcmd);
 	//
-	uint32_t tmp;
+	//uint32_t tmp;
     datasize = datasize;
     //
     //sio->io_count    = 32;
@@ -162,9 +164,12 @@ int CmdGetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     //sio->io_value[1] = (uint8_t)((relay_msk >> 8) & 0xFF);;
     //sio->io_value[2] = (uint8_t)((relay_msk >> 16) & 0xFF);;
     //sio->io_value[3] = (uint8_t)((relay_msk >> 24) & 0xFF);;
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
-	sio->io_count = (unsigned char)tmp;
-	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
+	//rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+	//sio->io_count = (unsigned char)tmp;
+	//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
+	//
+	sio->io_count = io_out_get_bits(0,sio->io_value,32);
+	rc = 0;
     //
     tcmd->cmd_option    = CMD_ACK_OK;
     tcmd->cmd           = CMD_GET_IO_OUT_VALUE;
@@ -195,8 +200,11 @@ int CmdSetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 		//uint32_t tmp;
 		//SetRelayWithDelay(group_arry4_to_uint32(io->io_value));
 
-		rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, io->io_value);
-		rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
+		//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, io->io_value);
+		//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
+		                io_out_set_bits(0,io->io_value,32);
+	    sio->io_count = io_out_get_bits(0,sio->io_value,32);
+	    rc = 0;
 
         tcmd->cmd_option     = CMD_ACK_OK;
         sio->io_count        = io->io_count;
@@ -236,10 +244,133 @@ int CmdRevertIoOutIndex(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     }
     //
     tcmd->cmd_option    = CMD_ACK_OK;	
-	rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, io->io_msk);
-	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_msk);
+	//rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, io->io_msk);
+	//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_msk);
+	io_out_convert_bits(0,io->io_msk,32);
+	io_out_get_bits(0,sio->io_msk,32);
+	rc = 0;
+
 error:
     tcmd->cmd           = CMD_REV_IO_SOME_BIT;
+    tcmd->cmd_index     = cmd->cmd_index;
+    tcmd->cmd_len       = outsize;
+    tcmd->data_checksum = CalCheckSum(sio,outsize);
+    //
+    NutTcpSend(sock,tcmd,(int)(sizeof(CmdHead)+outsize));
+    if(THISINFO)printf("CmdSetIoOutBit()!\r\n");
+    return rc;
+}
+
+int CmdSetIoOutOneBit(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int rc = -1;
+	const uint8_t outsize = sizeof(CmdIoValue);
+	uint8_t  buffer[sizeof(CmdHead)+outsize];
+	unsigned int num;
+	unsigned char reg;
+
+	CmdIoOneBit      *   io  = (CmdIoOneBit *)GET_CMD_DATA(cmd);
+
+    CmdHead          * tcmd  = (CmdHead *)buffer;
+    CmdIoValue       * sio   = (CmdIoValue *)GET_CMD_DATA(tcmd);
+    
+    //
+    if(datasize < sizeof(CmdIoOneBit)) {
+      if(THISERROR)printf("ERROR:Cmd CmdSetIoOutOneBit Datasize ERROR\r\n");
+	  tcmd->cmd_option    = CMD_ACK_KO;
+      goto error;
+    }
+    //
+    tcmd->cmd_option    = CMD_ACK_OK;	
+	num = io->io_bitnum[1];
+	num <<= 8;
+	num += io->io_bitnum[0];
+	reg = code_msk[0];
+	io_out_set_bits(num,&reg,1);
+	sio->io_count = io_out_get_bits(0,sio->io_value,32);
+	rc = 0;
+
+error:
+    tcmd->cmd           = CMD_SET_IO_ONE_BIT;
+    tcmd->cmd_index     = cmd->cmd_index;
+    tcmd->cmd_len       = outsize;
+    tcmd->data_checksum = CalCheckSum(sio,outsize);
+    //
+    NutTcpSend(sock,tcmd,(int)(sizeof(CmdHead)+outsize));
+    if(THISINFO)printf("CmdSetIoOutBit()!\r\n");
+    return rc;
+}
+int CmdClrIoOutOneBit(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int rc = -1;
+	const uint8_t outsize = sizeof(CmdIoValue);
+	uint8_t  buffer[sizeof(CmdHead)+outsize];
+	unsigned int num;
+	unsigned char reg;
+
+	CmdIoOneBit      *   io  = (CmdIoOneBit *)GET_CMD_DATA(cmd);
+
+    CmdHead          * tcmd  = (CmdHead *)buffer;
+    CmdIoValue       * sio   = (CmdIoValue *)GET_CMD_DATA(tcmd);
+    
+    //
+    if(datasize < sizeof(CmdIoOneBit)) {
+      if(THISERROR)printf("ERROR:Cmd CmdSetIoOutOneBit Datasize ERROR\r\n");
+	  tcmd->cmd_option    = CMD_ACK_KO;
+      goto error;
+    }
+    //
+    tcmd->cmd_option    = CMD_ACK_OK;	
+	num = io->io_bitnum[1];
+	num <<= 8;
+	num += io->io_bitnum[0];
+	reg = 0;
+	io_out_set_bits(num,&reg,1);
+	sio->io_count = io_out_get_bits(0,sio->io_value,32);
+	rc = 0;
+
+error:
+    tcmd->cmd           = CMD_CLR_IO_ONE_BIT;
+    tcmd->cmd_index     = cmd->cmd_index;
+    tcmd->cmd_len       = outsize;
+    tcmd->data_checksum = CalCheckSum(sio,outsize);
+    //
+    NutTcpSend(sock,tcmd,(int)(sizeof(CmdHead)+outsize));
+    if(THISINFO)printf("CmdSetIoOutBit()!\r\n");
+    return rc;
+}
+int CmdRevIoOutOneBit(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int rc = -1;
+	const uint8_t outsize = sizeof(CmdIoValue);
+	uint8_t  buffer[sizeof(CmdHead)+outsize];
+	unsigned int num;
+	unsigned char reg;
+
+	CmdIoOneBit      *   io  = (CmdIoOneBit *)GET_CMD_DATA(cmd);
+
+    CmdHead          * tcmd  = (CmdHead *)buffer;
+    CmdIoValue       * sio   = (CmdIoValue *)GET_CMD_DATA(tcmd);
+    
+    //
+    if(datasize < sizeof(CmdIoOneBit)) {
+      if(THISERROR)printf("ERROR:Cmd CmdSetIoOutOneBit Datasize ERROR\r\n");
+	  tcmd->cmd_option    = CMD_ACK_KO;
+      goto error;
+    }
+    //
+    tcmd->cmd_option    = CMD_ACK_OK;	
+	num = io->io_bitnum[1];
+	num <<= 8;
+	num += io->io_bitnum[0];
+	reg = code_msk[0];
+	printf("rev io one bit ,num = %d\r\n",num);
+	io_out_convert_bits(num,&reg,1);
+	sio->io_count = io_out_get_bits(0,sio->io_value,32);
+	rc = 0;
+
+error:
+    tcmd->cmd           = CMD_REV_IO_ONE_BIT;
     tcmd->cmd_index     = cmd->cmd_index;
     tcmd->cmd_len       = outsize;
     tcmd->data_checksum = CalCheckSum(sio,outsize);
@@ -260,12 +391,13 @@ int CmdGetIoInValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     //
     datasize = datasize;
     //
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
-	sio->io_count = (unsigned char)tmp;
-	memset(sio->io_value,0,sizeof(sio->io_value));
-	if(tmp) {
-		rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, sio->io_value);
-	}
+	//rc = _ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
+	//sio->io_count = (unsigned char)tmp;
+	//if(tmp) {
+		//rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, sio->io_value);
+	//}
+	sio->io_count = io_in_get_bits(0,sio->io_value,tmp);
+	rc = 0;
 
     //sio->io_count    = 8;
     //sio->io_value[0] = (uint32_t)((GetFilterInput() >> 0) & 0xFF);
@@ -862,6 +994,9 @@ const CmdMapToCmdCallType CmdCallMap[] =
 	{CMD_GET_IO_OUT_VALUE,CmdGetIoOutValue},
 	{CMD_SET_IO_OUT_VALUE,CmdSetIoOutValue},
 	{CMD_REV_IO_SOME_BIT,CmdRevertIoOutIndex},
+	{CMD_SET_IO_ONE_BIT,CmdSetIoOutOneBit},
+	{CMD_CLR_IO_ONE_BIT,CmdClrIoOutOneBit},
+	{CMD_REV_IO_ONE_BIT,CmdRevIoOutOneBit},
 	{CMD_GET_IO_IN_VALUE,CmdGetIoInValue},
     {CMD_SET_IP_CONFIG,CmdSetIpConfig},
     {CMD_GET_IP_CONFIG,CmdGetIpConfig},

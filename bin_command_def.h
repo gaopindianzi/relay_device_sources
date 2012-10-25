@@ -36,11 +36,15 @@ extern uint8_t    command_state;
 #define   CMD_GET_HOST_ADDRESS           15
 #define   CMD_SET_SYSTEM_RESET           16
 #define   CMD_REV_IO_SOME_BIT            36
+#define   CMD_SET_IO_ONE_BIT             37 //
+#define   CMD_CLR_IO_ONE_BIT             38 //
+#define   CMD_REV_IO_ONE_BIT             39 //
 #define   CMD_SET_IP_CONFIG              33
 #define   CMD_GET_IP_CONFIG              34
 #define   CMD_GET_INPUT_CTL_MODE_INDEX   40
 #define   CMD_SET_INPUT_CTL_MODE_INDEX   41
 
+#if 0
 typedef struct _CmdHead
 {
   uint8_t  cmd;
@@ -49,7 +53,16 @@ typedef struct _CmdHead
   uint16_t cmd_len;
   uint8_t  data_checksum;
 } CmdHead;
-
+#endif
+typedef struct _CmdHead
+{
+  uint8_t  cmd;
+  uint16_t cmd_index;
+  uint8_t  cmd_option;
+  uint8_t  pad;
+  uint8_t  cmd_len;
+  uint8_t  data_checksum;
+} CmdHead;
 
 #define GET_CMD_DATA(pCmd)         ((void *)(((char *)pCmd)+sizeof(CmdHead)))
 #define GET_CMD_OK(pcmd)           (((pcmd)->cmd_option)&CMD_ACK_OK)
@@ -57,6 +70,10 @@ typedef struct _CmdHead
 #define GET_CMD_STATE(pcmd)        ((((pcmd)->cmd_option)&0xF0)>>4)
 #define SET_CMD_STATE(pcmd,mode)   do{(pcmd)->cmd_option &= ~0xF0;(pcmd)->cmd_option |= ((mode)&0xF)<<4; }while(0)
 
+typedef struct _CmdIoOneBit
+{
+	uint8_t  io_bitnum[2];
+} CmdIoOneBit;
 
 
 typedef struct _CmdIoIndex

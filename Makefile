@@ -36,9 +36,9 @@ BSP_BOARD_TYPE = $(RELAY_PLATFORM_16CHIN_16CHOUT_30A)
 MAC0 = 00
 MAC1 = 06
 MAC2 = 98
-MAC3 = 8E
-MAC4 = 55
-MAC5 = 7b
+MAC3 = 31
+MAC4 = 10
+MAC5 = 16
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
@@ -48,6 +48,7 @@ HWDEF += -DBOARD_TYPE_MODEL=$(BSP_BOARD_TYPE)
 APP_TIMEIMG_ON = ON
 APP_CGI_ON = ON
 APP_485_ON = ON
+APP_485_EXTOUT = ON
 APP_MODBUS_TCP_ON  = ON
 APP_MULTI_MANGER_FRAME = ON
 #删除ON，PHP功能就取消
@@ -125,8 +126,14 @@ SRCS = main.c io_out.c bin_cmd_server.c bsp.c  time_handle.c udp_client_command.
 #485两个条件必须满足才编译
 ifeq ($(SYS_HAVE_485),ON)
 ifeq ($(APP_485_ON),ON)
+ifeq ($(APP_485_EXTOUT),ON)
+SRCS := $(SRCS) extern_serial16ch_out.c
+HWDEF += -DAPP_485_ON
+HWDEF += -DAPP_485_EXTOUT
+else
 SRCS := $(SRCS) can_485_uart.c
 HWDEF += -DAPP_485_ON
+endif
 endif
 endif
 

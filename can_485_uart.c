@@ -1,6 +1,3 @@
-
-
-
 #include <compiler.h>
 #include <cfg/os.h>
 
@@ -65,8 +62,6 @@ extern void dumpdata(void * _buffer,int len);
 
 #define THISINFO       0
 #define THISERROR      0
-
-UDPSOCKET * socket_max485    = NULL;
 
 #define     BUFFER_SIZE                  (128+10) 
 uint8_t     socket_rx_buffer[BUFFER_SIZE];
@@ -359,5 +354,5 @@ void StartCAN_485Srever(void)
 
 
 
-#endif
+#endif // #ifdef   APP_485_ON
 
