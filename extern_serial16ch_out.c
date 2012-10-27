@@ -153,7 +153,8 @@ THREAD(ext16chioout_thread, arg)
 			if(THISERROR)printf("sys_io.iofile not opened!\r\n");
 		}
 		if(THISINFO)printf("ext io out 16 ch wait 1s\r\n");
-        NutEventWait(&(sys_varient.io_out_event), 1000);
+        //NutEventWait(&(sys_varient.io_out_event), 1000);
+		NutSleep(50);
 	}
 }
 

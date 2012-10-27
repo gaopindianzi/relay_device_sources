@@ -122,7 +122,7 @@ unsigned int io_out_set_bits(unsigned int startbits,unsigned char * iobits,unsig
 		bitcount = OUTPUT_CHANNEL_NUM - startbits;
 	}
 	//开始设置
-	printf("io_out_set_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//printf("io_out_set_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
 	index = 0;
 	for(i=startbits;i<startbits+bitcount;i++) {
 	    Bb = index / 8;
@@ -157,7 +157,7 @@ unsigned int io_out_convert_bits(unsigned int startbits,unsigned char * iobits,u
 	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
 		bitcount = OUTPUT_CHANNEL_NUM - startbits;
 	}
-	printf("io_out_convert_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//printf("io_out_convert_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
 	//开始设置
 	index = 0;
 	for(i=startbits;i<startbits+bitcount;i++) {
@@ -196,7 +196,7 @@ unsigned int io_out_get_bits(unsigned int startbits,unsigned char * iobits,unsig
 	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
 		bitcount = OUTPUT_CHANNEL_NUM - startbits;
 	}
-	printf("io_out_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//printf("io_out_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
 	//开始设置
 	index = 0;
 	
@@ -224,13 +224,14 @@ unsigned int io_in_get_bits(unsigned int startbits,unsigned char * iobits,unsign
 	//_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
 	//参数必须符合条件
 	if(startbits >= INPUT_CHANNEL_NUM || bitcount == 0) {
+		//printf("io_in_get bit param error1:startbits = %d , bit count = %d\r\n",startbits,bitcount);
 		return 0;
 	}
 	//进一步判断是否符合条件
 	if((INPUT_CHANNEL_NUM - startbits) < bitcount) {
 		bitcount = INPUT_CHANNEL_NUM - startbits;
 	}
-	printf("io_in_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//printf("io_in_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
 	//开始设置
 	index = 0;
 	//

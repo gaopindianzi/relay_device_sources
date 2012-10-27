@@ -396,7 +396,7 @@ int CmdGetIoInValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	//if(tmp) {
 		//rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, sio->io_value);
 	//}
-	sio->io_count = io_in_get_bits(0,sio->io_value,tmp);
+	sio->io_count = io_in_get_bits(0,sio->io_value,32);
 	rc = 0;
 
     //sio->io_count    = 8;

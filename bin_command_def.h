@@ -53,7 +53,7 @@ typedef struct _CmdHead
   uint16_t cmd_len;
   uint8_t  data_checksum;
 } CmdHead;
-#endif
+#else
 typedef struct _CmdHead
 {
   uint8_t  cmd;
@@ -63,6 +63,8 @@ typedef struct _CmdHead
   uint8_t  cmd_len;
   uint8_t  data_checksum;
 } CmdHead;
+#endif
+
 
 #define GET_CMD_DATA(pCmd)         ((void *)(((char *)pCmd)+sizeof(CmdHead)))
 #define GET_CMD_OK(pcmd)           (((pcmd)->cmd_option)&CMD_ACK_OK)
