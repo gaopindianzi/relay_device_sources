@@ -46,7 +46,7 @@
 #include "bsp.h"
 
 #define THISINFO           0
-#define THISERROR          0
+#define THISERROR          1
 
 
 //
@@ -187,13 +187,7 @@ extern unsigned char input_trig_mode[INPUT_CHANNEL_NUM];
 
 int BspManualCtlModeInit(void)
 {
-	unsigned char i;
-	int ret;
-	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
-		ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+i,&switch_input_control_mode[i],1);
-		memcpy(input_trig_mode,switch_input_control_mode,INPUT_CHANNEL_NUM);
-	}
-	return ret;
+	return NutNvMemLoad(BSP_MODE_INDEX_OFFSET,input_trig_mode,INPUT_CHANNEL_NUM);
 }
 
 #include "bsp.h"
@@ -204,18 +198,22 @@ int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode)
 	if(index >= INPUT_CHANNEL_NUM) {
 		return -1;
 	}
-	ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+index,&switch_input_control_mode[index],1);
-	*mode = switch_input_control_mode[index];
+	ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+index,&input_trig_mode[index],1);
+	*mode = input_trig_mode[index];
 	return ret;
 }
 
 int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode)
 {
+	int ret = 0;
 	if(index >= INPUT_CHANNEL_NUM) {
 		return -1;
 	}
-	input_trig_mode[index] = switch_input_control_mode[index] = mode;
-	return NutNvMemSave(BSP_MODE_INDEX_OFFSET+index,&mode,1);
+	ret = NutNvMemSave(BSP_MODE_INDEX_OFFSET+index,&mode,1);
+	if(ret == 0) {
+	    input_trig_mode[index] = mode;
+	}
+	return ret;
 }
 
 int BspAvrResetType(void)

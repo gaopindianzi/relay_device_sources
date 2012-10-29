@@ -40,7 +40,7 @@
 #define INPUT_LEVEL_HITH_VALID
 #endif
 
-#ifdef RELAY_PLATFORM_16CHIN_16CHOUT_30A
+#if BOARD_TYPE == RELAY_PLATFORM_16CHIN_16CHOUT_30A
 #define INTEL_INPUT_CHANNEL_NUM        16
 #define INTEL_OUTPUT_CHANNEL_NUM       16
 #endif
@@ -106,13 +106,8 @@ int BspAvrResetType(void);
 #define BSP_IP_ADDR_OFFSET           128
 
 
-#define BSP_MODE_INDEX_OFFSET    (BSP_IP_ADDR_OFFSET+sizeof(CmdIpConfigData))
-extern unsigned char switch_input_control_mode[32];
-
-
-
-
-#define BSP_BOARD_INFO_OFFSET       (BSP_MODE_INDEX_OFFSET+sizeof(switch_input_control_mode))
+#define BSP_MODE_INDEX_OFFSET       (BSP_IP_ADDR_OFFSET+sizeof(CmdIpConfigData))
+#define BSP_BOARD_INFO_OFFSET       (BSP_MODE_INDEX_OFFSET+INPUT_CHANNEL_NUM)
 #define HOST_ADDRESS_CONFIG         (BSP_BOARD_INFO_OFFSET+sizeof(CmdBoardInfo))
 #define BSP_KEY_OFFSET              (HOST_ADDRESS_CONFIG+sizeof(host_address))
 

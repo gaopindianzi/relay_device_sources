@@ -47,7 +47,7 @@ extern uint8_t    command_state;
 #define   CMD_READ_REGISTER              80
 #define   CMD_WRITE_REGISTER             81
 
-#if 0
+#if 1
 typedef struct _CmdHead
 {
   uint8_t  cmd;
@@ -62,8 +62,13 @@ typedef struct _CmdHead
   uint8_t  cmd;
   uint16_t cmd_index;
   uint8_t  cmd_option;
+#if 0
   uint8_t  pad;
   uint8_t  cmd_len;
+#else
+  uint8_t  cmd_len;
+  uint8_t  pad;
+#endif
   uint8_t  data_checksum;
 } CmdHead;
 #endif

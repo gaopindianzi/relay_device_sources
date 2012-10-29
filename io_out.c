@@ -53,7 +53,7 @@
 
 #define THISINFO          0
 #define THISERROR         0
-#define THISASSERT        1
+#define THISASSERT        0
 
 
 #define  IO_OUT_COUNT_MAX            32
@@ -103,9 +103,10 @@ void input_power_on_init(void)
 	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
 		input_trigger_state[i] = TRIGGER_NONE;
 		input_filter_hold_time[i] = 0;
-		input_filter_hold_time_max[i] = 0;
+		input_filter_hold_time_max[i] = 10;
 		input_trig_before_delay[i] = 0;
-		input_trig_after_delay_max[i] = 0;
+		input_trig_before_delay_max[i] = 0;
+		input_trig_after_delay_max[i] = 30*100;
 		input_trig_to_witch_io_out[i] = i;
 	}
 }
@@ -131,12 +132,14 @@ void get_filter_input_flag(void)
 					(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
 					io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
 					input_trigger_state[i] = TRIGGER_HOLD;
+					if(THISINFO)printf("电平触发 开 ++ \r\n");
 				}
 				//输入电平控制关模式
 				if(input_trig_mode[i] == INPUT_LEVEL_CTL_OFF_MODE && 
 					(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
 					io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
 					input_trigger_state[i] = TRIGGER_HOLD;
+					if(THISINFO)printf("电平触发 关 ++ \r\n");
 				}
 			} else {
 				//上升沿
@@ -145,53 +148,64 @@ void get_filter_input_flag(void)
 				} else {
 				    input_current_flag[p] |=  code_msk[b];
 				    //动作
+					if(THISINFO)printf("input +++,input index=%d\r\n",i);
 				    //单触发
 				    if(input_trig_mode[i] == INPUT_SINGLE_TRIGGER_MODE && 
 						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_AFTER)) {
 					    //单触发模式下前延时后动作
-						input_trig_before_delay[i] = input_trig_before_delay[i];
+						if(THISINFO)printf("单触发 ++ \r\n");
+						input_trig_before_delay[i] = input_trig_before_delay_max[i];
 						input_trigger_state[i] = TRIGGER_BEFORE;
 					}
 					//触发翻转延时到
-					if(input_trig_mode[i] == INPUT_TRIGGER_FLIP_MODE && 
-						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
-						input_trig_before_delay[i] = input_trig_before_delay[i];
+					if(input_trig_mode[i] == INPUT_TRIGGER_FLIP_MODE && (input_trigger_state[i] == TRIGGER_NONE || 
+						input_trigger_state[i] == TRIGGER_HOLD || input_trigger_state[i] == TRIGGER_AFTER)) {
+						input_trig_before_delay[i] = input_trig_before_delay_max[i];
 						input_trigger_state[i] = TRIGGER_BEFORE;
+						if(THISINFO)printf("触发翻转 ++ \r\n");
 					}
 					//触发开通模式
-					if(input_trig_mode[i] == INPUT_TRIGGER_TO_OPEN_MODE && 
-						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
-						input_trig_before_delay[i] = input_trig_before_delay[i];
-						input_trigger_state[i] = TRIGGER_AFTER;
+					if(input_trig_mode[i] == INPUT_TRIGGER_TO_OPEN_MODE && (input_trigger_state[i] == TRIGGER_NONE || 
+						input_trigger_state[i] == TRIGGER_HOLD || input_trigger_state[i] == TRIGGER_AFTER)) {
+						input_trig_before_delay[i] = input_trig_before_delay_max[i];
+						input_trigger_state[i] = TRIGGER_BEFORE;
+						if(THISINFO)printf("触发开通 ++ \r\n");
 					}
 					//触发关闭模式
-					if(input_trig_mode[i] == INPUT_TRIGGER_TO_OFF_MODE && 
-						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
-						input_trig_before_delay[i] = input_trig_before_delay[i];
-						input_trigger_state[i] = TRIGGER_AFTER;
+					if(input_trig_mode[i] == INPUT_TRIGGER_TO_OFF_MODE && (input_trigger_state[i] == TRIGGER_NONE || 
+						input_trigger_state[i] == TRIGGER_HOLD || input_trigger_state[i] == TRIGGER_AFTER)) {
+						input_trig_before_delay[i] = input_trig_before_delay_max[i];
+						input_trigger_state[i] = TRIGGER_BEFORE;
+						if(THISINFO)printf("触发关闭 ++ \r\n");
 					}
 					//边沿触发模式
 					if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && 
 						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_AFTER)) { 
-							//边沿触发，只有进入到保持状态，才能进行上升沿触发
-						input_trig_before_delay[i] = input_trig_before_delay[i];
+						//边沿触发
+						if(THISINFO)printf("key rising edge trigger to before mode\r\n");
+						input_trig_before_delay[i] = input_trig_before_delay_max[i];
 						input_trigger_state[i] = TRIGGER_BEFORE;
 					}
-
 				}
 			}
 		} else {
 			if(input_current_flag[p]&code_msk[b]) {
 				//下降沿
 				if(input_filter_hold_time[i] > 0) {
-					input_filter_hold_time[i] -= 10;
+					input_filter_hold_time[i] -= 1;
 				} else {
 					input_current_flag[p] &= ~code_msk[b];
 					//动作
+					if(THISINFO)printf("input ---,input index=%d\r\n",i);
 					//边沿触发模式
-					if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && 
-						(input_trigger_state[i] == TRIGGER_BEFORE || input_trigger_state[i] == TRIGGER_HOLD)) { 
-						//边沿触发，只有进入到保持状态，才能进行下降沿触发
+					if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_BEFORE) { 
+						//还没触发就下降，那就取消上升沿
+						if(THISINFO)printf("key falsing edge cancel rising edge.\r\n");
+						input_trig_before_delay[i] = 0;
+						input_trigger_state[i] = TRIGGER_NONE;
+					} else if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_HOLD) { 
+						//只有进入到保持状态，才能进行下降沿触发
+						if(THISINFO)printf("key falsing edge trigger to after mode\r\n");
 						input_trig_before_delay[i] = input_trig_after_delay_max[i];
 						input_trigger_state[i] = TRIGGER_AFTER;
 					}
@@ -242,43 +256,53 @@ void trigger_timeout_handle(void)
 			//单触发
 		    if(input_trig_mode[i] == INPUT_SINGLE_TRIGGER_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
 				//单触发模式下前延时后动作
+				if(THISINFO)printf("single trig open time.\r\n");
 				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
 				input_trig_before_delay[i] = input_trig_after_delay_max[i];
+				if(input_trig_before_delay[i] < 100) {
+					input_trig_before_delay[i] = 100;
+				}
 				input_trigger_state[i] = TRIGGER_HOLD;
 		    } else if(input_trig_mode[i] == INPUT_SINGLE_TRIGGER_MODE && input_trigger_state[i] == TRIGGER_HOLD) {
 				//单触发模式下前延时后动作
+				if(THISINFO)printf("single trig close time.\r\n");
 				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
-				input_trigger_state[i] = TRIGGER_AFTER;
+				input_trigger_state[i] = TRIGGER_NONE;
 			}
 			//触发翻转延时到
 			if(input_trig_mode[i] == INPUT_TRIGGER_FLIP_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
 				//翻转
+				if(THISINFO)printf("trig convert time.\r\n");
 				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
 				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
 			}
 			//触发开通模式
 			if(input_trig_mode[i] == INPUT_TRIGGER_TO_OPEN_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
 				//翻转
-				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
+				if(THISINFO)printf("trig open time.\r\n");
+				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
 				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
 			}
 			//触发关闭模式
 			if(input_trig_mode[i] == INPUT_TRIGGER_TO_OFF_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
 				//翻转
+				if(THISINFO)printf("trig close time.\r\n");
 				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
 				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
 			}
 			//边沿触发模式
 			if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
+				if(THISINFO)printf("edge trig , before\r\n");
 				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
 				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
 			} else if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_AFTER) {
+				if(THISINFO)printf("edge trig , after\r\n");
 				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
-				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
+				input_trigger_state[i] = TRIGGER_NONE;//以后就处于保持状态
 			}
 		}
 		if(input_trig_before_delay[i] > 0) {
-			input_trig_before_delay[i] -= 10;  //10ms
+			input_trig_before_delay[i]--;  //10ms
 		}
 	}
 }

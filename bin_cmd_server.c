@@ -78,12 +78,14 @@ void BinCmdPrase(TCPSOCKET * sock,void * buff,int len);
 uint16_t gwork_port = 2000;
 uint16_t gweb_port  = 80;
 
+int CmdGetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize);
+
 void bin_cmd_thread_server(void)
 {
 	uint8_t count = 0;
 	TCPSOCKET * sock;
 	char buff[120];
-	uint32_t time = 16000;
+	uint32_t time = 15000;
 
 	if(THISINFO)printf("CMD:Thraed running...\r\n");
 
@@ -108,10 +110,15 @@ void bin_cmd_thread_server(void)
             if(len == 0) {
 				if(THISINFO)printf("Tcp Recieve timeout.\r\n");
 				if(++count == 1) {
-					if(THISINFO)printf("Tcp Send ""OK"".\r\n");
-				    NutTcpSend(sock,"OK",strlen("OK"));
+					if(THISINFO)printf("Tcp Send Io Out Data.\r\n");
+				    //NutTcpSend(sock,"OK",strlen("OK"));
+					{
+						//都继电器状态的模拟请求。
+						uint8_t  buffer[sizeof(CmdHead)] = {0x01,0x00,0x00,0x00,0x00,0x00,0x00};
+						CmdGetIoOutValue(sock,(CmdHead *)buffer,sizeof(buffer));
+					}
 				}
-				if(++count >= 2) {
+				if(++count >= 3) {
 					if(THISINFO)printf("Close Command Socket\r\n");
 					break;
 				}
