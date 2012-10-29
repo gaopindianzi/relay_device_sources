@@ -58,8 +58,6 @@
 
 extern void dumpdata(void * _buffer,int len);
 
-#define BITS_TO_BS(bit_num)    (((bit_num)+7)/8)
-
 extern unsigned char io_out[32/8];
 extern const uint32_t code_msk[32];
 

@@ -51,7 +51,7 @@
 #include "bsp.h"
 
 #define THISINFO          0
-#define THISERROR         0
+#define THISERROR         1
 
 
 extern const unsigned char  code_msk[8];
@@ -66,7 +66,6 @@ int BspWriteIpConfig(CmdIpConfigData * cid);
 
 
 void RevertRelayWithDelay(uint32_t out);
-
 
 typedef struct _CmdMapToCmdCallType
 {
@@ -383,7 +382,7 @@ error:
 int CmdGetIoInValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 {
 	int rc = -1;
-	uint32_t tmp;
+	//uint32_t tmp;
 	const uint8_t outsize = sizeof(CmdIoValue);
 	uint8_t  buffer[sizeof(CmdHead)+outsize];
     CmdHead       * tcmd  = (CmdHead *)buffer;
@@ -986,11 +985,75 @@ int CmdSetSystemReset(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     return CmdIoFinish(sock,tcmd,act_size);
 }
 //--------------------------------------------------------------------------------------------
+// ¶¼¼Ä´æÆ÷
+//
+int CmdReadRegister(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int act_size = 0;
+	unsigned int  addr,len;
+	unsigned char buffer[sizeof(CmdHead)+REGISTER_MAX_LEN]; //¶¼¼Ä´æÆ÷µÄÔÝ´æÆ÷
+	CmdHead          * tcmd  = (CmdHead *)buffer;
+	//host_address     *  rio  = (host_address *)GET_CMD_DATA(cmd);
+	CmdRegister      *  tio  = (CmdRegister *)GET_CMD_DATA(tcmd);
+	CmdRegister      *  rio  = (CmdRegister *)GET_CMD_DATA(cmd);
+	//
+	act_size = sizeof(CmdHead) + sizeof(CmdRegister);
+	//if(THISINFO)printf("CmdGetRemoteHostAddress+++\r\n"); 
+	tcmd->cmd_option    = CMD_ACK_KO;
+	addr   = rio->reg_addr_hi;
+	addr <<= 8;
+	addr  += rio->reg_addr_lo;
+	len   = rio->reg_len_hi;
+	len <<= 8;
+	len  += rio->reg_len_lo;
+	if(device_read_register(addr,&tio->reg_base,len) == len) {
+        tcmd->cmd_option    = CMD_ACK_OK;
+	}
+    tcmd->cmd           = CMD_READ_REGISTER;
+    tcmd->cmd_index     = cmd->cmd_index;
+	//if(THISINFO)printf("CmdGetRemoteHostAddress---\r\n");
+    return CmdIoFinish(sock,tcmd,act_size);
+}
+//--------------------------------------------------------------------------------------------
 //
 //
+int CmdWriteRegister(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int act_size = 0;
+	unsigned int  addr,len;
+	unsigned char buffer[sizeof(CmdHead)+REGISTER_MAX_LEN]; //¶¼¼Ä´æÆ÷µÄÔÝ´æÆ÷
+	CmdHead          * tcmd  = (CmdHead *)buffer;
+	//host_address     *  rio  = (host_address *)GET_CMD_DATA(cmd);
+	CmdRegister      *  tio  = (CmdRegister *)GET_CMD_DATA(tcmd);
+	CmdRegister      *  rio  = (CmdRegister *)GET_CMD_DATA(cmd);
+	//
+	act_size = sizeof(CmdHead) + sizeof(CmdRegister) - 1;
+	//if(THISINFO)printf("CmdGetRemoteHostAddress+++\r\n"); 
+	
+	addr   = rio->reg_addr_hi;
+	addr <<= 8;
+	addr  += rio->reg_addr_lo;
+	len   = rio->reg_len_hi;
+	len <<= 8;
+	len  += rio->reg_len_lo;
+	memcpy(tio,rio,sizeof(CmdRegister));
+	tcmd->cmd_option    = CMD_ACK_KO;
+	if(device_write_register(addr,&rio->reg_base,len) == len) {
+        tcmd->cmd_option    = CMD_ACK_OK;
+	}
+	
+    tcmd->cmd           = CMD_READ_REGISTER;
+    tcmd->cmd_index     = cmd->cmd_index;
+	tcmd->cmd_len       = sizeof(CmdRegister) - 1;
+	//if(THISINFO)printf("CmdGetRemoteHostAddress---\r\n");
+    return CmdIoFinish(sock,tcmd,act_size);
+}
+
 
 const CmdMapToCmdCallType CmdCallMap[] = 
 {
+	{CMD_READ_REGISTER,CmdReadRegister},
+	{CMD_WRITE_REGISTER,CmdWriteRegister},
 	{CMD_GET_IO_OUT_VALUE,CmdGetIoOutValue},
 	{CMD_SET_IO_OUT_VALUE,CmdSetIoOutValue},
 	{CMD_REV_IO_SOME_BIT,CmdRevertIoOutIndex},

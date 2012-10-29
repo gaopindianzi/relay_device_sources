@@ -43,6 +43,9 @@ extern uint8_t    command_state;
 #define   CMD_GET_IP_CONFIG              34
 #define   CMD_GET_INPUT_CTL_MODE_INDEX   40
 #define   CMD_SET_INPUT_CTL_MODE_INDEX   41
+//新增定时器接口
+#define   CMD_READ_REGISTER              80
+#define   CMD_WRITE_REGISTER             81
 
 #if 0
 typedef struct _CmdHead
@@ -64,6 +67,16 @@ typedef struct _CmdHead
   uint8_t  data_checksum;
 } CmdHead;
 #endif
+
+//读写寄存器的通用接口
+typedef struct _CmdRegister
+{
+  uint8_t  reg_addr_hi;
+  uint8_t  reg_addr_lo;
+  uint8_t  reg_len_hi;
+  uint8_t  reg_len_lo;
+  uint8_t  reg_base;
+} CmdRegister;
 
 
 #define GET_CMD_DATA(pCmd)         ((void *)(((char *)pCmd)+sizeof(CmdHead)))

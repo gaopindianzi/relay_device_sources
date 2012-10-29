@@ -65,4 +65,8 @@
 //¶Ë¿Ú
 #define UDP_AUTO_CONFIG_PORT        6799
 
+
+#define BITS_TO_BS(bit_num)    (((bit_num)+7)/8)
+
+
 #endif

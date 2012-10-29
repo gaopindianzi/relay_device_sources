@@ -184,6 +184,11 @@ extern int load_relay_info(ethernet_relay_info * info);
 extern int save_relay_info(ethernet_relay_info * info);
 #endif
 
+#define    REGISTER_MAX_LEN         64
+extern int device_read_register(unsigned int addr,unsigned char * buffer,unsigned int len);
+extern int device_write_register(unsigned int addr,unsigned char * buffer,unsigned int len);
+
+
 
 #endif
 

@@ -47,11 +47,13 @@
 #include "io_time_ctl.h"
 #include <dev/relaycontrol.h>
 #include "sys_var.h"
+#include "io_out.h"
 #include "debug.h"
 
 
 #define THISINFO          0
 #define THISERROR         0
+#define THISASSERT        1
 
 
 #define  IO_OUT_COUNT_MAX            32
@@ -61,12 +63,230 @@
 //
 const unsigned char  code_msk[8] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
 
-unsigned char last_input[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
+unsigned char last_input[BITS_TO_BS(IO_IN_COUNT_MAX)]     __attribute__ ((section (".noinit")));
 unsigned char input_flag[IO_IN_COUNT_MAX/8]     __attribute__ ((section (".noinit")));
 unsigned char input_filter[IO_IN_COUNT_MAX/8]   __attribute__ ((section (".noinit")));
 unsigned char input_hold[IO_IN_COUNT_MAX]       __attribute__ ((section (".noinit")));
 unsigned char switch_input_control_mode[IO_IN_COUNT_MAX];
 
+
+//------------------------------------------------------------------------------------------------
+//重新修改输入触发的代码
+//输入触发，简单有输入：延时触发时间，触发延时时间
+//输入触发模式每种动作都有时间在里面
+//默认上电后是不动作的。只有运行的时候发生了改变才需要触发，意思是说上电后初始数据需要根据输入的状态来初始化
+//unsigned char input_trigger_signals[BITS_TO_BS(INPUT_CHANNEL_NUM)]; //输入各种模式的标志
+unsigned char input_current_flag[BITS_TO_BS(INPUT_CHANNEL_NUM)];
+unsigned char input_trigger_state[INPUT_CHANNEL_NUM]; //触发状态
+unsigned int  input_filter_hold_time[INPUT_CHANNEL_NUM],input_filter_hold_time_max[INPUT_CHANNEL_NUM];
+unsigned int  input_trig_before_delay[INPUT_CHANNEL_NUM];
+unsigned int  input_trig_before_delay_max[INPUT_CHANNEL_NUM],input_trig_after_delay_max[INPUT_CHANNEL_NUM];
+unsigned char input_trig_mode[INPUT_CHANNEL_NUM];
+unsigned char input_trig_to_witch_io_out[INPUT_CHANNEL_NUM]; //需要触发那一路？只能映射一路
+
+#define TRIGGER_NONE       0
+#define TRIGGER_BEFORE     1
+#define TRIGGER_HOLD       2
+#define TRIGGER_AFTER      3
+
+
+
+
+
+//上电初始化所有数据
+//外部条件就是，必须等键盘程序已经准备好了
+void input_power_on_init(void)
+{
+	unsigned int  num = io_in_get_bits(0,input_current_flag,INPUT_CHANNEL_NUM);
+	ASSERT(num==INPUT_CHANNEL_NUM);
+	unsigned int i;
+	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
+		input_trigger_state[i] = TRIGGER_NONE;
+		input_filter_hold_time[i] = 0;
+		input_filter_hold_time_max[i] = 0;
+		input_trig_before_delay[i] = 0;
+		input_trig_after_delay_max[i] = 0;
+		input_trig_to_witch_io_out[i] = i;
+	}
+}
+
+//实时地更新键盘键值，滤波输入，然后产生触发信号
+void get_filter_input_flag(void)
+{
+	unsigned int i;
+	unsigned char input_temp_flag[BITS_TO_BS(INPUT_CHANNEL_NUM)];
+	unsigned int  num = io_in_get_bits(0,input_temp_flag,INPUT_CHANNEL_NUM);
+	ASSERT(num==INPUT_CHANNEL_NUM);
+	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
+		unsigned char reg0x1 = 0x01;
+		unsigned char reg0x0 = 0x00;
+		unsigned char p,b;
+		p = i / 8;
+		b = i % 8;
+		if(input_temp_flag[p]&code_msk[b]) {
+			if(input_current_flag[p]&code_msk[b]) {
+				//保持
+				//输入电平控制开模式
+				if(input_trig_mode[i] == INPUT_LEVEL_CTL_ON_MODE && 
+					(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+					io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
+					input_trigger_state[i] = TRIGGER_HOLD;
+				}
+				//输入电平控制关模式
+				if(input_trig_mode[i] == INPUT_LEVEL_CTL_OFF_MODE && 
+					(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+					io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
+					input_trigger_state[i] = TRIGGER_HOLD;
+				}
+			} else {
+				//上升沿
+				if(input_filter_hold_time[i] < input_filter_hold_time_max[i]) {
+					input_filter_hold_time[i]++;
+				} else {
+				    input_current_flag[p] |=  code_msk[b];
+				    //动作
+				    //单触发
+				    if(input_trig_mode[i] == INPUT_SINGLE_TRIGGER_MODE && 
+						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_AFTER)) {
+					    //单触发模式下前延时后动作
+						input_trig_before_delay[i] = input_trig_before_delay[i];
+						input_trigger_state[i] = TRIGGER_BEFORE;
+					}
+					//触发翻转延时到
+					if(input_trig_mode[i] == INPUT_TRIGGER_FLIP_MODE && 
+						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+						input_trig_before_delay[i] = input_trig_before_delay[i];
+						input_trigger_state[i] = TRIGGER_BEFORE;
+					}
+					//触发开通模式
+					if(input_trig_mode[i] == INPUT_TRIGGER_TO_OPEN_MODE && 
+						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+						input_trig_before_delay[i] = input_trig_before_delay[i];
+						input_trigger_state[i] = TRIGGER_AFTER;
+					}
+					//触发关闭模式
+					if(input_trig_mode[i] == INPUT_TRIGGER_TO_OFF_MODE && 
+						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+						input_trig_before_delay[i] = input_trig_before_delay[i];
+						input_trigger_state[i] = TRIGGER_AFTER;
+					}
+					//边沿触发模式
+					if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && 
+						(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_AFTER)) { 
+							//边沿触发，只有进入到保持状态，才能进行上升沿触发
+						input_trig_before_delay[i] = input_trig_before_delay[i];
+						input_trigger_state[i] = TRIGGER_BEFORE;
+					}
+
+				}
+			}
+		} else {
+			if(input_current_flag[p]&code_msk[b]) {
+				//下降沿
+				if(input_filter_hold_time[i] > 0) {
+					input_filter_hold_time[i] -= 10;
+				} else {
+					input_current_flag[p] &= ~code_msk[b];
+					//动作
+					//边沿触发模式
+					if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && 
+						(input_trigger_state[i] == TRIGGER_BEFORE || input_trigger_state[i] == TRIGGER_HOLD)) { 
+						//边沿触发，只有进入到保持状态，才能进行下降沿触发
+						input_trig_before_delay[i] = input_trig_after_delay_max[i];
+						input_trigger_state[i] = TRIGGER_AFTER;
+					}
+				}
+			} else {
+				//空闲
+				input_filter_hold_time[i] = 0;
+				//保持
+				//输入电平控制开模式
+				if(input_trig_mode[i] == INPUT_LEVEL_CTL_ON_MODE && 
+					(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+					io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
+					input_trigger_state[i] = TRIGGER_HOLD;
+				}
+				//输入电平控制关模式
+				if(input_trig_mode[i] == INPUT_LEVEL_CTL_OFF_MODE && 
+					(input_trigger_state[i] == TRIGGER_NONE || input_trigger_state[i] == TRIGGER_HOLD)) {
+					io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
+					input_trigger_state[i] = TRIGGER_HOLD;
+				}
+			}
+		}
+	}
+}
+
+#if 0
+#define INPUT_TRIGGER_FLIP_MODE          0x00  //触发反转模式
+#define INPUT_SINGLE_TRIGGER_MODE        0x01  //单触发模式
+#define INPUT_TRIGGER_TO_OPEN_MODE       0x02  //触发开通模式
+#define INPUT_TRIGGER_TO_OFF_MODE        0x03  //触发关闭模式
+#define INPUT_EDGE_TRIG_MODE             0x04  //边沿触发模式
+#define INPUT_LEVEL_CTL_ON_MODE          0x05  //输入电平控制开模式
+#define INPUT_LEVEL_CTL_OFF_MODE         0x06  //输入电平控制关模式
+#define INPUT_TRIGGER_OFF_MODE           0x07  //控制关闭
+/*
+*/
+#endif
+
+//触发延时动作
+void trigger_timeout_handle(void)
+{
+	unsigned char reg0x1 = 0x01;
+	unsigned char reg0x0 = 0x00;
+	unsigned int i;
+	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
+		//什么状态和什么模式就执行什么动作
+		if(input_trig_before_delay[i] == 0) {
+			//单触发
+		    if(input_trig_mode[i] == INPUT_SINGLE_TRIGGER_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
+				//单触发模式下前延时后动作
+				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
+				input_trig_before_delay[i] = input_trig_after_delay_max[i];
+				input_trigger_state[i] = TRIGGER_HOLD;
+		    } else if(input_trig_mode[i] == INPUT_SINGLE_TRIGGER_MODE && input_trigger_state[i] == TRIGGER_HOLD) {
+				//单触发模式下前延时后动作
+				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
+				input_trigger_state[i] = TRIGGER_AFTER;
+			}
+			//触发翻转延时到
+			if(input_trig_mode[i] == INPUT_TRIGGER_FLIP_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
+				//翻转
+				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
+				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
+			}
+			//触发开通模式
+			if(input_trig_mode[i] == INPUT_TRIGGER_TO_OPEN_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
+				//翻转
+				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
+				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
+			}
+			//触发关闭模式
+			if(input_trig_mode[i] == INPUT_TRIGGER_TO_OFF_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
+				//翻转
+				io_out_set_bits(input_trig_to_witch_io_out[i],&reg0x0,1);
+				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
+			}
+			//边沿触发模式
+			if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_BEFORE) {
+				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
+				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
+			} else if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_AFTER) {
+				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
+				input_trigger_state[i] = TRIGGER_HOLD;//以后就处于保持状态
+			}
+		}
+		if(input_trig_before_delay[i] > 0) {
+			input_trig_before_delay[i] -= 10;  //10ms
+		}
+	}
+}
+
+
+
+//以上是新的输入处理代码
+//------------------------------------------------------------------------------------------------
 
 
 extern unsigned char switch_signal_hold_time[32];
@@ -541,48 +761,39 @@ extern void check_get_mac_address(unsigned char * mac);
 #endif
 #endif
 
+
+extern void io_scan_timing_server(void);
+
 void io_out_ctl_thread_server(void)
 {
-	int rc = -1;
-	uint32_t outnum,innum;
 	uint16_t count = 0;
 	uint8_t  led = 0;
-	unsigned char buffer[16];
-	unsigned char io_in_8ch,io_in_8ch_last;
-	unsigned char timing_open_off_count = 128;  //如果小于128，则需要打开，如果大于128，则需要关闭
-	unsigned char timing_delay_count = 0;
 
 
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &outnum);
-
-	if(!rc) {
-		if(THISINFO)printf("fopen relayctl succ.\r\n");
-	} else {
-		if(THISINFO)printf("fopen relayctl failed.\r\n");
-	}
-
-
-	_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &innum);
-
-	if(THISINFO)printf("IOCTL:inputnum(%d),outputnum(%d).\r\n",(int)innum,(int)outnum);
+	NutSleep(5);
 
 #ifdef APP_TIMEIMG_ON
 	timing_init();
 #endif
 
-	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
-	io_in_8ch_last = io_in_8ch = input_filter[0] = input_flag[0] = last_input[0] = buffer[0];
-	input_filter[1] = input_flag[1] = last_input[1] = buffer[1];
-	input_filter[2] = input_flag[2] = last_input[2] = buffer[2];
-	input_filter[3] = input_flag[3] = last_input[3] = buffer[3];
-	
+#if 0
+	count = io_in_get_bits(0,input_flag,32);
+	memcpy(last_input,input_flag,count);
+	memcpy(input_filter,input_flag,count);
+#endif
+
 	if(THISINFO)printf("start scan io_in(0x%x),io_out(0x%x).\r\n",(unsigned int)last_input[0],io_out[0]);
+
+	input_power_on_init();
 
     while(1) {
 #ifdef APP_TIMEIMG_ON
 		io_scan_timing_server();
 #endif
-		if(innum) {//输入控制
+
+		/*
+#if 0
+		if(1) {//输入控制
 		    _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
 
 			io_in_8ch = buffer[0] & (0x3<<6);
@@ -659,7 +870,17 @@ void io_out_ctl_thread_server(void)
 			}
 #endif
 		}
+
 		IoOutTimeTickUpdateServer();
+#endif
+		*/
+
+#if (INPUT_CHANNEL_NUM > 0)
+		get_filter_input_flag();
+		trigger_timeout_handle();
+#endif
+
+
 		//等待10ms到来
 		NutSemWait(&sys_10ms_sem);
 		//
@@ -672,7 +893,7 @@ void io_out_ctl_thread_server(void)
 		} else if(count < 200) {
 			led &= ~0x02;
 		} else {
-			unsigned char mac[6];
+			//unsigned char mac[6];
 			count = 0;
 			//check_app();
 			//check_get_mac_address(mac);

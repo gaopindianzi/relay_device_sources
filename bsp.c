@@ -36,6 +36,7 @@
 //#include <arch/avr.h>
 
 #include "bin_command_def.h"
+#include "regtable.h"
 
 #ifdef NUTDEBUG
 #include <sys/osdebug.h>
@@ -182,12 +183,15 @@ int BspWriteIpConfig(CmdIpConfigData * cid)
 	return ret;
 }
 
+extern unsigned char input_trig_mode[INPUT_CHANNEL_NUM];
+
 int BspManualCtlModeInit(void)
 {
 	unsigned char i;
 	int ret;
 	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
 		ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+i,&switch_input_control_mode[i],1);
+		memcpy(input_trig_mode,switch_input_control_mode,INPUT_CHANNEL_NUM);
 	}
 	return ret;
 }
@@ -203,7 +207,6 @@ int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode)
 	ret = NutNvMemLoad(BSP_MODE_INDEX_OFFSET+index,&switch_input_control_mode[index],1);
 	*mode = switch_input_control_mode[index];
 	return ret;
-
 }
 
 int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode)
@@ -211,7 +214,7 @@ int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode)
 	if(index >= INPUT_CHANNEL_NUM) {
 		return -1;
 	}
-	switch_input_control_mode[index] = mode;
+	input_trig_mode[index] = switch_input_control_mode[index] = mode;
 	return NutNvMemSave(BSP_MODE_INDEX_OFFSET+index,&mode,1);
 }
 
@@ -463,4 +466,39 @@ int save_relay_info(ethernet_relay_info * info)
 	uint16_t offset = BSP_HTTP_CLIENT_INFO_OFFSET;
 	NutNvMemSave(offset,info,sizeof(ethernet_relay_info));
 }
+
+
+
 #endif
+
+
+//根据不同的地址，不同的长度判断读写什么内容
+//如果非法地址，或者未定义地址，则返回0，否则返回读取的长度
+
+int device_read_register(unsigned int addr,unsigned char * buffer,unsigned int len)
+{
+	reg_node * node = &reg_table[0];
+	while(1)
+	{
+		node++;
+		if(node->data_len == 0 && node->count == 0) {
+			break;
+		}
+		if((addr >= node->base_addr) && 
+			(addr < (node->base_addr + (node->data_len*node->count))) && 
+			((addr%node->data_len) == 0)) 
+		{
+			if(len == node->data_len) {
+				//NutNvMemLoad(offset,info,sizeof(ethernet_relay_info));
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+int device_write_register(unsigned int addr,unsigned char * buffer,unsigned int len)
+{
+	return 0;
+}
+

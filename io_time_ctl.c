@@ -48,7 +48,6 @@
 #include "time_handle.h"
 #include "io_out.h"
 #include "bsp.h"
-
 #include "debug.h"
 
 
@@ -341,13 +340,17 @@ extern const uint32_t code_msk[32];
 
 int timing_ctl_io_node(const timing_node * node,int on)
 {
+	unsigned char reg0x1 = 0x1;
+	unsigned char reg0x0 = 0x0;
 	if(node->addr[1] == 0) {
 		if(node->addr[0] < 32) {
 			if(code_msk[node->addr[0]]&io_timing_on_msk) {
 		        if(on) {
-			        SetRelayOneBitWithDelay(node->addr[0]);
+					io_out_set_bits(node->addr[0],&reg0x1,1);
+			        //SetRelayOneBitWithDelay(node->addr[0]);
 		        } else {
-			        ClrRelayOneBitWithDelay(node->addr[0]);
+			        //ClrRelayOneBitWithDelay(node->addr[0]);
+					io_out_set_bits(node->addr[0],&reg0x0,1);
 		        }
 			}
 		}
