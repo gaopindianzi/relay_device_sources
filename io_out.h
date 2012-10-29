@@ -16,4 +16,6 @@ unsigned int io_out_set_bits(unsigned int startbits,unsigned char * iobits,unsig
 unsigned int io_out_convert_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount);
 
 
+void input_set_default_param(void);
+
 #endif

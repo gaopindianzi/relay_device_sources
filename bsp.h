@@ -107,7 +107,8 @@ int BspAvrResetType(void);
 
 
 #define BSP_MODE_INDEX_OFFSET       (BSP_IP_ADDR_OFFSET+sizeof(CmdIpConfigData))
-#define BSP_BOARD_INFO_OFFSET       (BSP_MODE_INDEX_OFFSET+INPUT_CHANNEL_NUM)
+#define BSP_MODE_CTL_OFFSET         (BSP_MODE_INDEX_OFFSET+INPUT_CHANNEL_NUM) //新的控制模式存储偏移地址
+#define BSP_BOARD_INFO_OFFSET       (BSP_MODE_CTL_OFFSET+INPUT_CHANNEL_NUM*sizeof(CmdInputControl))
 #define HOST_ADDRESS_CONFIG         (BSP_BOARD_INFO_OFFSET+sizeof(CmdBoardInfo))
 #define BSP_KEY_OFFSET              (HOST_ADDRESS_CONFIG+sizeof(host_address))
 
@@ -178,6 +179,11 @@ extern void BspSavemultimgr_info(device_info_st * info);
 extern int load_relay_info(ethernet_relay_info * info);
 extern int save_relay_info(ethernet_relay_info * info);
 #endif
+
+
+extern int BspReadControlMode(unsigned char index,CmdInputControl * pm);
+extern int BspWriteControlMode(unsigned char index,CmdInputControl * pm);
+
 
 #define    REGISTER_MAX_LEN         64
 extern int device_read_register(unsigned int addr,unsigned char * buffer,unsigned int len);

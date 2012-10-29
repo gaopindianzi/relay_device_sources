@@ -95,19 +95,32 @@ unsigned char input_trig_to_witch_io_out[INPUT_CHANNEL_NUM]; //ĞèÒª´¥·¢ÄÇÒ»Â·£¿Ö
 
 //ÉÏµç³õÊ¼»¯ËùÓĞÊı¾İ
 //Íâ²¿Ìõ¼ş¾ÍÊÇ£¬±ØĞëµÈ¼üÅÌ³ÌĞòÒÑ¾­×¼±¸ºÃÁË
+
+void input_set_default_param(void)
+{
+	unsigned int i;
+	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
+		CmdInputControl ctl;
+
+		ctl.index = i;
+		ctl.mode = INPUT_TRIGGER_OFF_MODE;
+		ctl.input_filter_time_hi      = 0;ctl.input_filter_time_lo      = 10;
+		ctl.input_trig_front_time_hi  = 0;ctl.input_trig_front_time_lo  = 0;
+		ctl.input_trig_after_time_hi  = 0;ctl.input_trig_after_time_lo  = 0;
+		ctl.input_trig_io_number = i;
+
+		BspWriteControlMode(i,&ctl);
+	}
+}
+
 void input_power_on_init(void)
 {
 	unsigned int  num = io_in_get_bits(0,input_current_flag,INPUT_CHANNEL_NUM);
 	ASSERT(num==INPUT_CHANNEL_NUM);
 	unsigned int i;
 	for(i=0;i<INPUT_CHANNEL_NUM;i++) {
-		input_trigger_state[i] = TRIGGER_NONE;
-		input_filter_hold_time[i] = 0;
-		input_filter_hold_time_max[i] = 10;
-		input_trig_before_delay[i] = 0;
-		input_trig_before_delay_max[i] = 0;
-		input_trig_after_delay_max[i] = 30*100;
-		input_trig_to_witch_io_out[i] = i;
+		CmdInputControl ctl;
+		BspReadControlMode(i,&ctl);
 	}
 }
 

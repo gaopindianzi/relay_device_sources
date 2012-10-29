@@ -192,6 +192,7 @@ int BspManualCtlModeInit(void)
 
 #include "bsp.h"
 
+#if 0
 int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode)
 {
 	int ret  = 0;
@@ -215,6 +216,40 @@ int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode)
 	}
 	return ret;
 }
+#else  //根据新控制协议，改装旧的接口
+int BspReadManualCtlModeIndex(unsigned char index,unsigned char * mode)
+{
+	int ret = -1;
+	CmdInputControl ctl;
+	uint16_t offset = BSP_MODE_CTL_OFFSET + index * sizeof(CmdInputControl);
+	if(index >= INPUT_CHANNEL_NUM) {
+		return ret;
+	}
+	ret = NutNvMemLoad(offset,&ctl,sizeof(CmdInputControl));
+	if(ret == 0) {
+		*mode = ctl.mode;
+	}
+	return ret;
+}
+
+int BspWriteManualCtlModeIndex(unsigned char index,unsigned char mode)
+{
+	int ret = -1;
+	CmdInputControl ctl;
+	uint16_t offset = BSP_MODE_CTL_OFFSET + index * sizeof(CmdInputControl);
+	if(index >= INPUT_CHANNEL_NUM) {
+		return ret;
+	}
+	ret = NutNvMemLoad(offset,&ctl,sizeof(CmdInputControl));
+	ctl.mode = mode;
+	ret = NutNvMemSave(offset,&ctl,sizeof(CmdInputControl));
+	if(ret == 0) {
+		input_trig_mode[index] = mode;
+	}
+	return ret;
+}
+#endif
+
 
 int BspAvrResetType(void)
 {
@@ -464,10 +499,88 @@ int save_relay_info(ethernet_relay_info * info)
 	uint16_t offset = BSP_HTTP_CLIENT_INFO_OFFSET;
 	NutNvMemSave(offset,info,sizeof(ethernet_relay_info));
 }
-
-
-
 #endif
+
+
+
+//--------------------------------------------------------------------
+/*
+* 以下是控制模式的代码
+*/
+extern unsigned int  input_filter_hold_time_max[INPUT_CHANNEL_NUM];
+extern unsigned int  input_trig_before_delay_max[INPUT_CHANNEL_NUM],input_trig_after_delay_max[INPUT_CHANNEL_NUM];
+extern unsigned char input_trig_mode[INPUT_CHANNEL_NUM];
+extern unsigned char input_trig_to_witch_io_out[INPUT_CHANNEL_NUM]; //需要触发那一路？只能映射一路
+
+
+int BspReadControlMode(unsigned char index,CmdInputControl * pm)
+{
+	int ret = -1;
+	uint16_t offset = BSP_MODE_CTL_OFFSET + index * sizeof(CmdInputControl);
+	if(index >= INPUT_CHANNEL_NUM) {
+		return ret;
+	}
+	ret = NutNvMemLoad(offset,pm,sizeof(CmdInputControl));
+	if(ret == 0) {
+		unsigned int tmp;
+		input_trig_mode[index] = pm->mode;
+
+		tmp = pm->input_filter_time_hi;
+		tmp <<= 8;
+		tmp += pm->input_filter_time_lo;
+		input_filter_hold_time_max[index] = tmp;
+
+		tmp = pm->input_trig_front_time_hi;
+		tmp <<= 8;
+		tmp += pm->input_trig_front_time_lo;
+		input_trig_before_delay_max[index] = tmp;
+
+		tmp = pm->input_trig_after_time_hi;
+		tmp <<= 8;
+		tmp += pm->input_trig_after_time_lo;
+		input_trig_after_delay_max[index] = tmp;
+
+		input_trig_to_witch_io_out[index] = pm->input_trig_io_number;
+	}
+	return ret;
+}
+int BspWriteControlMode(unsigned char index,CmdInputControl * pm)
+{
+	int ret = -1;
+	uint16_t offset = BSP_MODE_CTL_OFFSET + index * sizeof(CmdInputControl);
+	if(index >= INPUT_CHANNEL_NUM) {
+		return ret;
+	}
+	ret = NutNvMemSave(offset,pm,sizeof(CmdInputControl));
+	if(ret == 0) {
+		unsigned int tmp;
+		input_trig_mode[index] = pm->mode;
+
+		tmp = pm->input_filter_time_hi;
+		tmp <<= 8;
+		tmp += pm->input_filter_time_lo;
+		input_filter_hold_time_max[index] = tmp;
+
+		tmp = pm->input_trig_front_time_hi;
+		tmp <<= 8;
+		tmp += pm->input_trig_front_time_lo;
+		input_trig_before_delay_max[index] = tmp;
+
+		tmp = pm->input_trig_after_time_hi;
+		tmp <<= 8;
+		tmp += pm->input_trig_after_time_lo;
+		input_trig_after_delay_max[index] = tmp;
+
+		input_trig_to_witch_io_out[index] = pm->input_trig_io_number;
+	}
+	return ret;
+}
+/*
+* 以上 是控制模式的代码
+*/
+//--------------------------------------------------------------------
+
+
 
 
 //根据不同的地址，不同的长度判断读写什么内容

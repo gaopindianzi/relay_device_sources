@@ -202,6 +202,8 @@ int main(void)
 		save_relay_info(&sys_info);
 		//保存更新
 #endif		
+		input_set_default_param();  //设置输入控制参数
+
 		BspWriteFactoryOut(0x55);
 		BspWriteFactoryOut(0x55);
 	} else {

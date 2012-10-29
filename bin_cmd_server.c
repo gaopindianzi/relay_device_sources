@@ -991,8 +991,61 @@ int CmdSetSystemReset(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     tcmd->cmd_index     = cmd->cmd_index;
     return CmdIoFinish(sock,tcmd,act_size);
 }
+
 //--------------------------------------------------------------------------------------------
-// 都寄存器
+// 读控制模式新
+//
+int CmdReadInputControl(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int act_size = 0;
+	const uint8_t outsize = sizeof(CmdInputControl);
+	uint8_t  buffer[sizeof(CmdHead)+outsize];
+	CmdHead             * tcmd  = (CmdHead *)buffer;
+	CmdInputModeIndex   *  rio  = (CmdInputModeIndex *)GET_CMD_DATA(cmd);
+	CmdInputControl     *  tio  = (CmdInputControl *)GET_CMD_DATA(tcmd);
+	//
+	if(THISINFO)printf("CmdReadInputControl+++\r\n");
+	act_size = outsize;
+	tcmd->cmd_option    = CMD_ACK_KO;
+	if(!BspReadControlMode(rio->index,tio)) {
+        tcmd->cmd_option    = CMD_ACK_OK;
+	}
+    tcmd->cmd           = CMD_GET_INPUT_CTL_MODE;
+    tcmd->cmd_index     = cmd->cmd_index;
+	if(THISINFO)printf("CmdReadInputControl---\r\n");
+    return CmdIoFinish(sock,tcmd,act_size);
+}
+//--------------------------------------------------------------------------------------------
+// 写控制模式新
+//
+int CmdWriteInputControl(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	int act_size = 0;
+	const uint8_t outsize = sizeof(CmdInputControl);
+	uint8_t  buffer[sizeof(CmdHead)+outsize];
+	CmdHead             * tcmd  = (CmdHead *)buffer;
+	CmdInputControl     *  rio  = (CmdInputControl *)GET_CMD_DATA(cmd);
+	CmdInputControl     *  tio  = (CmdInputControl *)GET_CMD_DATA(tcmd);
+	//
+	if(THISINFO)printf("CmdReadInputControl+++\r\n");
+	act_size = outsize;
+	tcmd->cmd_option    = CMD_ACK_KO;
+	if(datasize < sizeof(buffer)) {
+		if(THISERROR)printf("ERROR:write input control data size error:%d\r\n",datasize);
+	} else {
+	    memcpy(tio,rio,sizeof(CmdInputControl));
+	    if(!BspWriteControlMode(rio->index,rio)) {
+            tcmd->cmd_option    = CMD_ACK_OK;
+	    }
+	}
+    tcmd->cmd           = CMD_SET_INPUT_CTL_MODE;
+    tcmd->cmd_index     = cmd->cmd_index;
+	if(THISINFO)printf("CmdReadInputControl---\r\n");
+    return CmdIoFinish(sock,tcmd,act_size);
+}
+
+//--------------------------------------------------------------------------------------------
+// 读寄存器
 //
 int CmdReadRegister(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 {
@@ -1072,6 +1125,8 @@ const CmdMapToCmdCallType CmdCallMap[] =
     {CMD_GET_IP_CONFIG,CmdGetIpConfig},
     {CMD_GET_INPUT_CTL_MODE_INDEX,CmdGetInputCtlModeIndex},
     {CMD_SET_INPUT_CTL_MODE_INDEX,CmdSetInputCtlModeIndex},
+	{CMD_GET_INPUT_CTL_MODE,CmdReadInputControl},
+	{CMD_SET_INPUT_CTL_MODE,CmdWriteInputControl},
 	{CMD_GET_IO_NAME,CmdGetIoName},
 	{CMD_SET_IO_NAME,CmdSetIoName},
 #ifdef APP_TIMEIMG_ON
