@@ -311,7 +311,7 @@ void trigger_timeout_handle(void)
 			} else if(input_trig_mode[i] == INPUT_EDGE_TRIG_MODE && input_trigger_state[i] == TRIGGER_AFTER) {
 				if(THISINFO)printf("edge trig , after\r\n");
 				io_out_convert_bits(input_trig_to_witch_io_out[i],&reg0x1,1);
-				input_trigger_state[i] = TRIGGER_NONE;//以后就处于保持状态
+				input_trigger_state[i] = TRIGGER_NONE;//完整触发完毕，回到原始状态
 			}
 		}
 		if(input_trig_before_delay[i] > 0) {

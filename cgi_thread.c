@@ -298,30 +298,35 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 			if(strcmp(name,"ID") == 0) {
 				int id = atoi(value);
 				if(THISINFO)printf("reveice ID = %d",id);
-				if(0)  {  //id < 1 || id > 2) {
-					fputs_P(PSTR("status=ID parameter error! (ID must be >= 1 and <= 2!"),stream);
+				if(id < 1) {
+					fputs_P(PSTR("status=ID parameter error! (ID must be >= 1"),stream);
 					break;
 				} else {
 					name = NutHttpGetParameterName(req, i+1);
 					value = NutHttpGetParameterValue(req, i+1);
 					if(strcmp(name,"Command") == 0) {
 						if(strcmp(value,"On") == 0) {
-							id = id-1;
-							unsigned char buf[2];
-							buf[0] = id & 0xFF;
-							buf[1] = id >> 8;
-							_ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buf);
+							unsigned char reg0x01 = 0x01;
+							//unsigned char buf[2];
+							//buf[0] = id & 0xFF;
+							//buf[1] = id >> 8;
+
+							io_out_set_bits(id-1,&reg0x01,1);
+
+							//_ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buf);
 							//SetRelayOneBitWithDelay(id-1);
 							fprintf_P(stream,PSTR("status=request ok,set ID=%d On"),id);
 							break;
 						} else if(strcmp(value,"Off") == 0) {
+							unsigned char reg0x00 = 0x00;
 							//ClrRelayOneBitWithDelay(id-1);
 							//
-							id = id-1;
-							unsigned char buf[2];
-							buf[0] = id & 0xFF;
-							buf[1] = id >> 8;
-							_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buf);
+							//id = id-1;
+							//unsigned char buf[2];
+							//buf[0] = id & 0xFF;
+							//buf[1] = id >> 8;
+							io_out_set_bits(id-1,&reg0x00,1);
+							//_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buf);
 							//
 							fprintf_P(stream,PSTR("status=request ok,set ID=%d Off"),id);
 							break;
