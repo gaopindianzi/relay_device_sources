@@ -9,9 +9,7 @@ typedef struct _sys_varient_type
 #ifdef APP_485_ON
 	FILE  * stream_max485;
 #endif
-#ifdef APP_485_EXTOUT
 	HANDLE io_out_event;
-#endif
 } sys_varient_type;
 
 extern sys_varient_type sys_varient;

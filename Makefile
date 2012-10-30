@@ -38,7 +38,7 @@ MAC1 = 06
 MAC2 = 98
 MAC3 = 32
 MAC4 = 09
-MAC5 = 29
+MAC5 = 30
 #以上MAC地址将自动生成一下字符串
 ETHERNET_MAC = \"\x$(MAC0)\x$(MAC1)\x$(MAC2)\x$(MAC3)\x$(MAC4)\x$(MAC5)\"
 HWDEF += -DSYS_DEFAULT_MAC=$(ETHERNET_MAC)
@@ -50,7 +50,7 @@ APP_CGI_ON = ON
 APP_485_ON = ON
 
 #扩展后16路到串口继电器，如果关闭，则485作为串口输入，打开则为扩展输出
-APP_485_EXTOUT = ON
+APP_485_EXTOUT = 
 
 APP_MODBUS_TCP_ON  = ON
 APP_MULTI_MANGER_FRAME = ON
