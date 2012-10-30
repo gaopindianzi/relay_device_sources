@@ -63,6 +63,7 @@
 #include <pro/ssi.h>
 #include <pro/asp.h>
 #include <pro/discover.h>
+#include <pro/sntp.h>
 
 #include <dev/watchdog.h>
 #include <sys/timer.h>
@@ -320,7 +321,11 @@ int main(void)
 	} else {
 		if(THISINFO)puts("sys_time_init failed");
 	}
+
+	//启动SNTP客户端
+	//NutSNTPStartThread(0x22332244,100);
 	//
+
 	if(reset_type&AVR_EXT_RESET) {
 		//复位
 		if(THISINFO)printf("Ext reset init io out.\r\n");
