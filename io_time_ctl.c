@@ -630,24 +630,24 @@ int  now_is_on_io_sub_timing(const struct _tm * now,const uint32_t now_ms,timing
 {
 	uint32_t on_time;
 	int pos;
-	int type = GET_IO_TIME_CYCLE_TYPE(node);
-	if(!GET_IO_TIME_VALID(node)) {
+	int type = GET_IO_TIME_CYCLE_TYPE(node); //获取定时的循环类型
+	if(!GET_IO_TIME_VALID(node)) { //如果此定时节点无效，则直接退出，不再分析
 		return -1;
 	}
-	pos = now_is_on_io_timing(now,node,&on_time);
-	if(pos < 0) { //在定时时间之前
-	} else if(pos > 0) { //定时完毕，关闭
-		if(node->state == TIME_NO_COME) {
+	pos = now_is_on_io_timing(now,node,&on_time); //计算pos值，返回-1,0,1三个结果。
+	if(pos < 0) { //在定时时间之前，时间还没到，不用动作
+	} else if(pos > 0) { //定时完毕，关闭，时间已经过去了，判断几种情况
+		if(node->state == TIME_NO_COME) { //节点的状态表明，这个定时没有操作过。
 			//还未定时操作过,不要动作
 			return -1;
-		} else if(node->state == TIME_DOING || node->state == TIME_SUBDO_ON) {
+		} else if(node->state == TIME_DOING || node->state == TIME_SUBDO_ON) { //定时正在操作之中，或者
 			//定时刚刚完毕,动作关闭
 			timing_ctl_io_node(node,0);
 			node->state = TIME_OVER;
 			SET_IO_TIME_DONE(node,1);
 			return 1;
 		}
-	} else {//在定时器内
+	} else {//在定时器内,pos == 0的情况，说明现在的时间(now)，刚好落在定时的时间范围内。
 		//更新状态
 		if((node->state == TIME_OVER || node->state == TIME_NO_COME)) {
 			node->state = TIME_DOING;
