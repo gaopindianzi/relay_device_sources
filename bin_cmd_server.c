@@ -51,7 +51,7 @@
 #include "bsp.h"
 
 #define THISINFO          0
-#define THISERROR         1
+#define THISERROR         0
 
 
 extern const unsigned char  code_msk[8];
@@ -80,12 +80,15 @@ uint16_t gweb_port  = 80;
 
 int CmdGetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize);
 
-void bin_cmd_thread_server(void)
+
+THREAD(bin_cmd_thread0, arg)
 {
 	uint8_t count = 0;
 	TCPSOCKET * sock;
 	char buff[120];
 	uint32_t time = 15000;
+
+	NutThreadSetPriority(TCP_BIN_SERVER_PRI);
 
 	if(THISINFO)printf("CMD:Thraed running...\r\n");
 
@@ -139,9 +142,136 @@ void bin_cmd_thread_server(void)
 		}
 		NutTcpCloseSocket(sock);
 	}
-//thread_stop:
-	while(1)NutSleep(100000);
 }
+
+THREAD(bin_cmd_thread1, arg)
+{
+	uint8_t count = 0;
+	TCPSOCKET * sock;
+	char buff[120];
+	uint32_t time = 15000;
+
+	NutThreadSetPriority(TCP_BIN_SERVER_PRI);
+
+	if(THISINFO)printf("CMD:Thraed running...\r\n");
+
+	while(1) {
+		//if(THISINFO)printf("Start Create Socket(%d)\r\n",count++);
+		sock = NutTcpCreateSocket();
+		if(sock == 0) {
+			if(THISERROR)printf("CMD:Create socket failed!\r\n");
+			continue;
+		}
+		NutTcpSetSockOpt(sock,SO_RCVTIMEO,&time,sizeof(uint32_t));
+		if(THISINFO)printf("CMD: NutTcpAccept at port %d\r\n",gwork_port);
+		if(NutTcpAccept(sock,gwork_port)) {
+			NutTcpCloseSocket(sock);
+			if(THISERROR)printf("CMD:NutTcpAccept Timeout! NutTcpCloseSocket and reaccept.\r\n");
+			continue;
+		}
+		if(THISINFO)printf("CMD:Tcp Accept one connection.\r\n");
+		count = 0;
+		while(1) {
+			int len = NutTcpReceive(sock,buff,sizeof(buff));
+            if(len == 0) {
+				if(THISINFO)printf("Tcp Recieve timeout.\r\n");
+				if(++count == 1) {
+					if(THISINFO)printf("Tcp Send Io Out Data.\r\n");
+				    //NutTcpSend(sock,"OK",strlen("OK"));
+					{
+						//都继电器状态的模拟请求。
+						uint8_t  buffer[sizeof(CmdHead)] = {0x01,0x00,0x00,0x00,0x00,0x00,0x00};
+						CmdGetIoOutValue(sock,(CmdHead *)buffer,sizeof(buffer));
+					}
+				}
+				if(++count >= 3) {
+					if(THISINFO)printf("Close Command Socket\r\n");
+					break;
+				}
+			} else if(len == -1) {
+				int error = NutTcpError(sock);
+				if(THISERROR)printf("CMD:Tcp Receive ERROR(%d)\r\n",error);
+				if(error == ENOTCONN)  {
+					if(THISERROR)printf("CMD:Socket is not connected,break connecting\r\n");
+					break;
+				} else {
+					if(THISERROR)printf("CMD:Socket is unknow error,break connecting\r\n");
+					break;
+				}
+			} else if(len > 0) {
+				//printf("Get One Tcp packet length(%d)\r\n",len);
+				BinCmdPrase(sock,buff,len);
+			}
+		}
+		NutTcpCloseSocket(sock);
+	}
+}
+
+
+
+THREAD(bin_cmd_thread3, arg)
+{
+	uint8_t count = 0;
+	TCPSOCKET * sock;
+	char buff[120];
+	uint32_t time = 15000;
+
+	NutThreadSetPriority(TCP_BIN_SERVER_PRI);
+
+	if(THISINFO)printf("CMD:Thraed running...\r\n");
+
+	while(1) {
+		//if(THISINFO)printf("Start Create Socket(%d)\r\n",count++);
+		sock = NutTcpCreateSocket();
+		if(sock == 0) {
+			if(THISERROR)printf("CMD:Create socket failed!\r\n");
+			continue;
+		}
+		NutTcpSetSockOpt(sock,SO_RCVTIMEO,&time,sizeof(uint32_t));
+		if(THISINFO)printf("CMD: NutTcpAccept at port %d\r\n",gwork_port);
+		if(NutTcpAccept(sock,gwork_port)) {
+			NutTcpCloseSocket(sock);
+			if(THISERROR)printf("CMD:NutTcpAccept Timeout! NutTcpCloseSocket and reaccept.\r\n");
+			continue;
+		}
+		if(THISINFO)printf("CMD:Tcp Accept one connection.\r\n");
+		count = 0;
+		while(1) {
+			int len = NutTcpReceive(sock,buff,sizeof(buff));
+            if(len == 0) {
+				if(THISINFO)printf("Tcp Recieve timeout.\r\n");
+				if(++count == 1) {
+					if(THISINFO)printf("Tcp Send Io Out Data.\r\n");
+				    //NutTcpSend(sock,"OK",strlen("OK"));
+					{
+						//都继电器状态的模拟请求。
+						uint8_t  buffer[sizeof(CmdHead)] = {0x01,0x00,0x00,0x00,0x00,0x00,0x00};
+						CmdGetIoOutValue(sock,(CmdHead *)buffer,sizeof(buffer));
+					}
+				}
+				if(++count >= 3) {
+					if(THISINFO)printf("Close Command Socket\r\n");
+					break;
+				}
+			} else if(len == -1) {
+				int error = NutTcpError(sock);
+				if(THISERROR)printf("CMD:Tcp Receive ERROR(%d)\r\n",error);
+				if(error == ENOTCONN)  {
+					if(THISERROR)printf("CMD:Socket is not connected,break connecting\r\n");
+					break;
+				} else {
+					if(THISERROR)printf("CMD:Socket is unknow error,break connecting\r\n");
+					break;
+				}
+			} else if(len > 0) {
+				//printf("Get One Tcp packet length(%d)\r\n",len);
+				BinCmdPrase(sock,buff,len);
+			}
+		}
+		NutTcpCloseSocket(sock);
+	}
+}
+
 
 static unsigned char CalCheckSum(void * buffer,unsigned int len)
 {
@@ -1182,16 +1312,9 @@ void BinCmdPrase(TCPSOCKET * sock,void * buff,int len)
 	}
 }
 
-THREAD(bin_cmd_thread, arg)
-{
-    NutThreadSetPriority(TCP_BIN_SERVER_PRI);
-    bin_cmd_thread_server();
-	while(1) {
-		NutSleep(100000);
-	}
-}
-
 void StartBinCmdServer(void)
 {
-	NutThreadCreate("bin_cmd_thread",  bin_cmd_thread, 0, 2024);
+	NutThreadCreate("bin_cmd_thread0",  bin_cmd_thread0, 0, 1024);
+	NutThreadCreate("bin_cmd_thread1",  bin_cmd_thread1, 0, 1024);
+	NutThreadCreate("bin_cmd_thread3",  bin_cmd_thread1, 0, 1024);
 }
