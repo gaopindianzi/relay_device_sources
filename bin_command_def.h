@@ -204,6 +204,18 @@ typedef struct _time_type
 	uint8_t    min;
 	uint8_t    sec;
 } time_type;
+
+typedef struct _time_type_e
+{
+	uint8_t    year;
+	uint8_t    mon;
+	uint8_t    day;
+	uint8_t    hour;
+	uint8_t    min;
+	uint8_t    sec;
+	uint8_t    week;
+} time_type_e;
+
 typedef struct _timing_node
 {
 	uint8_t    addr[2];  //定时端口地址编码（板上输出口地址范围为[0][0] ~ [0][16]），第5路输出就是addr[0]=4,addr[1]=0
