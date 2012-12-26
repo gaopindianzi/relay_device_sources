@@ -89,6 +89,7 @@
 #include <dev/usartavr485.h>
 #include <cfg/platform_def.h>
 #include "multimgr_device.h"
+#include "plc_prase.h"
 #include "sys_var.h"
 #include "bsp.h"
 
@@ -510,6 +511,8 @@ config_finish:
 	StartHttpRequestThread();
 #endif
 
+	StartPlcThread();
+
 	while(0) {
 		NutSleep(1000);
 		printf("..\r\n");
@@ -585,6 +588,7 @@ config_finish:
 			_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 		}
 #endif
+		plc_timing_tick_process();
 	}
     return 0;
 }

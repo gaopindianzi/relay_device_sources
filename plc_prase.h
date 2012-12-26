@@ -3,9 +3,9 @@
 
 //--------------------------µØÖ·±àºÅ-------ÊýÁ¿-----------
 #define  IO_INPUT_BASE          0
-#define  IO_INPUT_COUNT                     9
+#define  IO_INPUT_COUNT                     8
 #define  IO_OUTPUT_BASE         256  //0x01,0x00
-#define  IO_OUTPUT_COUNT                    7
+#define  IO_OUTPUT_COUNT                    8
 #define  AUXI_RELAY_BASE        512  //0x02,0x00
 #define  AUXI_RELAY_COUNT                   100
 #define  AUXI_HOLDRELAY_BASE    1024 //0x04,0x00
@@ -40,8 +40,11 @@ extern unsigned char get_bitval(unsigned int index);
 
 extern void plc_code_test_init(void);
 
-extern void sys_lock(void);
-extern void sys_unlock(void);
+#define sys_lock()   NutEnterCritical()
+#define sys_unlock() NutExitCritical()
+
+
+extern void StartPlcThread(void);
 
 
 #endif

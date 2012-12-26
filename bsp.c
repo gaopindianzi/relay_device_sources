@@ -617,13 +617,3 @@ int device_write_register(unsigned int addr,unsigned char * buffer,unsigned int 
 
 
 
-void sys_lock(void)
-{
-	NutEnterCritical();
-}
-void sys_unlock(void)
-{
-	NutExitCritical();
-}
-
-

@@ -34,6 +34,7 @@
 #include <dev/nvmem.h>
 #include <time.h>
 #include <sys/mutex.h>
+#include <sys/atom.h>
 
 #ifdef NUTDEBUG
 #include <sys/osdebug.h>
@@ -53,13 +54,9 @@
 #include "plc_command_def.h"
 #include "plc_prase.h"
 #include "compiler.h"
-//#include "sysdef.h"
-//#include "bsp.h"
-//#include "io_out.h"
-//#include "debug.h"
 
-#define THIS_INFO  0
-#define THIS_ERROR 0
+#define THIS_INFO  1
+#define THIS_ERROR 1
 
 
 //100ms计时器的控制数据结构
@@ -152,27 +149,19 @@ void sys_time_tick_init(void)
 
 void plc_rtc_tick_process(void)
 {
-#if 0
 	//读时间进来
-	unsigned int TP_temp = ReadTemperatureXX_XC();
-	DS1302_VAL tval;
-	sys_lock();
-	temp_reg[1] = TP_temp / 100;  //度
-	temp_reg[0] = TP_temp % 100;  //小数度
-	sys_unlock();
-	ReadRTC(&tval);
-	BCD2Hex(&tval,sizeof(tval));
+	struct _tm  sys_time;
+	NutRtcGetTime(&sys_time);
 	//以下按照从小到大排序，分别为：秒，分，时，日，月，年，最后是星期
 	sys_lock();
-	rtc_reg[5] = tval.YEAR;
-	rtc_reg[4] = tval.MONTH;
-	rtc_reg[3] = tval.DATE;
-	rtc_reg[2] = tval.HR;
-	rtc_reg[1] = tval.MIN;
-	rtc_reg[0] = tval.SEC;
-	rtc_reg[6] = tval.DAY;
+	rtc_reg[5] = sys_time.tm_year;
+	rtc_reg[4] = sys_time.tm_mon;
+	rtc_reg[3] = sys_time.tm_mday;
+	rtc_reg[2] = sys_time.tm_hour;
+	rtc_reg[1] = sys_time.tm_min;
+	rtc_reg[0] = sys_time.tm_sec;
+	rtc_reg[6] = sys_time.tm_wday;
 	sys_unlock();
-#endif
 }
 
 void plc_timing_tick_process(void)
@@ -267,39 +256,8 @@ FF
 const unsigned char plc_test_flash[128] =
 {
 	0,
-	PLC_BCMP, 21,    0x10,0x08,  0x02,0x00,
-	PLC_BCMP, 22,    0x10,0x08,  0x02,0x03,
-	PLC_BCMP, 23,    0x10,0x08,  0x02,0x06,
-	PLC_BCMP, 24,    0x10,0x08,  0x02,0x09,
-	PLC_BCMP, 25,    0x10,0x08,  0x02,0x0C,
-	PLC_BCMP, 26,    0x10,0x08,  0x02,0x0F,
-	PLC_BCMP, 27,    0x10,0x08,  0x02,0x12,
-	PLC_BCMP, 28,    0x10,0x08,  0x02,0x15,
-
-	PLC_LD,   0x02,0x01,
-	PLC_OUT,  0x01,0x00,
-
-	PLC_LD,   0x02,0x04,
-	PLC_OUT,  0x01,0x01,
-
-	PLC_LD,   0x02,0x07,
-	PLC_OUT,  0x01,0x02,
-
-	PLC_LD,   0x02,0x0A,
-	PLC_OUT,  0x01,0x03,
-
-	PLC_LD,   0x02,0x0D,
-	PLC_OUT,  0x01,0x04,
-
-	PLC_LD,   0x02,0x10,
-	PLC_OUT,  0x01,0x05,
-
-	PLC_LD,   0x02,0x13,
-	PLC_OUT,  0x01,0x06,
-
-	PLC_LD,   0x02,0x16,
-	PLC_OUT,  0x01,0x07,
-
+	PLC_BZCP,20,40,    0x10,0x00,    0x01,0x00,
+	PLC_BCMP,30,       0x10,0x00,    0x01,0x05,
 	PLC_END
 };
 
@@ -383,7 +341,7 @@ void handle_plc_command_error(void)
 	//提示第几条指令出错
 	//然后复位，或停止运行
 	plc_cpu_stop = 1;
-	//if(THIS_ERROR)putrsUART((ROM char*)"\r\nhandle_plc_command_error!!!!!!\r\n");
+	if(THIS_ERROR)printf("\r\nhandle_plc_command_error!!!!!!\r\n");
 }
 
 unsigned char get_bitval(unsigned int index)
@@ -878,7 +836,7 @@ void handle_plc_out_c(void)
     if(index >= COUNTER_EVENT_BASE && index < (COUNTER_EVENT_BASE+COUNTER_EVENT_COUNT)) {
 	    index -= COUNTER_EVENT_BASE;
 	} else {
-	    if(THIS_ERROR)printf("输出计数器索引值有错误!\r\n");
+	   // if(THIS_ERROR)printf("输出计数器索引值有错误!\r\n");
 		handle_plc_command_error();
 	    return ;
 	}
@@ -905,6 +863,8 @@ void handle_plc_out_c(void)
 
 /**********************************************
  * 区间复位指令，比如把Y0 - Y7 复位
+ * 第一版end不闭合，就是开合
+ * 这个不行，应该是闭合的，即包括最后一个
  */
 void handle_plc_zrst(void)
 {
@@ -920,7 +880,7 @@ void handle_plc_zrst(void)
 	unsigned int start = HSB_BYTES_TO_WORD(&plc->start_hi);
 	unsigned int end = HSB_BYTES_TO_WORD(&plc->end_hi);
 	unsigned int i;
-	for(i=start;i<end;i++) {
+	for(i=start;i<=end;i++) {
 		set_bitval(i,0);
 	}
 	plc_command_index += sizeof(zrst_command);
@@ -928,7 +888,9 @@ void handle_plc_zrst(void)
 /**********************************************
  * 比较指令
  * BCMP   K   B   M0
- * 该指令为字节比较指令，将比较的结果<,=,>三种结果分别告知给M0，M1，M2。
+ * 第一版发货的: K < reg 1,0,0, K = reg ==> 0,1,0    K > reg ==> 0,0,1
+ * 经过测试，指令不够直观，应该是变化的寄存器小于K，应该是1,0,0,
+ * 第二版改为： reg < K 1,0,0, K = reg ==> 0,1,0    reg > K ==> 0,0,1
  */
 void handle_plc_bcmp(void)
 {
@@ -944,15 +906,15 @@ void handle_plc_bcmp(void)
 	plc_command * plc = (plc_command *)plc_command_array;
 	unsigned char reg = get_byte_val(HSB_BYTES_TO_WORD(&plc->reg_hi));
 	unsigned int  out = HSB_BYTES_TO_WORD(&plc->out_hi);
-	if(plc->kval < reg) {
+	if(reg < plc->kval) {
 		set_bitval(out,1);
 		set_bitval(out+1,0);
 		set_bitval(out+2,0);
-	} else if(plc->kval == reg) {
+	} else if(reg == plc->kval) {
 		set_bitval(out,0);
 		set_bitval(out+1,1);
 		set_bitval(out+2,0);
-	} else if(plc->kval > reg) {
+	} else if(reg > plc->kval) {
 		set_bitval(out,0);
 		set_bitval(out+1,0);
 		set_bitval(out+2,1);
@@ -1247,4 +1209,24 @@ void PlcProcess(void)
         //令牌溢出，重新来一遍，每个人都有机会做一次通信动作
         net_global_send_index = 0;
     }
+}
+
+
+
+
+THREAD(plc_thread, arg)
+{
+	if(THIS_INFO)printf("plc_thread run...\r\n");
+	NutThreadSetPriority(IO_AND_TIMING_SCAN_RPI);
+	PlcInit();
+    while(1)
+	{
+		PlcProcess();
+		//NutSleep(1);
+	}
+}
+
+void StartPlcThread(void)
+{
+	NutThreadCreate("plc_thread",  plc_thread, 0, 1024);
 }
