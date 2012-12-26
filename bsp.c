@@ -32,6 +32,7 @@
 #include <dev/gpio.h>
 #include <cfg/arch/avr.h>
 #include <dev/nvmem.h>
+#include <sys/atom.h>
 
 //#include <arch/avr.h>
 
@@ -612,4 +613,17 @@ int device_write_register(unsigned int addr,unsigned char * buffer,unsigned int 
 {
 	return 0;
 }
+
+
+
+
+void sys_lock(void)
+{
+	NutEnterCritical();
+}
+void sys_unlock(void)
+{
+	NutExitCritical();
+}
+
 
