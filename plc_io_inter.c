@@ -35,6 +35,7 @@
 #include <time.h>
 #include <sys/mutex.h>
 #include <sys/atom.h>
+#include <dev/ds1307rtc.h>
 
 #ifdef NUTDEBUG
 #include <sys/osdebug.h>
@@ -173,3 +174,14 @@ unsigned int phy_io_out_set_bits(unsigned int startbits,unsigned char * iobits,u
 	NutEventPost(&(sys_varient.io_out_event));
 	return bitcount;
 }
+
+void holder_register_read(unsigned int start,unsigned char * buffer,unsigned int len)
+{
+	DS1307RamRead(0x08+start,buffer,len);
+}
+
+void holder_register_write(unsigned int start,unsigned char * buffer,unsigned int len)
+{
+	DS1307RamWrite(0x08+start,buffer,len);
+}
+

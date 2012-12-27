@@ -9,7 +9,7 @@
 #define  AUXI_RELAY_BASE        512  //0x02,0x00
 #define  AUXI_RELAY_COUNT                   100
 #define  AUXI_HOLDRELAY_BASE    1024 //0x04,0x00
-#define  AUXI_HOLDRELAY_COUNT               120
+#define  AUXI_HOLDRELAY_COUNT               (HOLDER_REGISTER_BYTES/2)
 //
 #define  TIMING100MS_EVENT_BASE  2048  //0x08,0x00
 #define  TIMING100MS_EVENT_COUNT            24

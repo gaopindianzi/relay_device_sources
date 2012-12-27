@@ -256,26 +256,29 @@ FF
 const unsigned char plc_test_flash[128] =
 {
 	0,
-//	PLC_BCMPE, 20, 0x20,0x01,    0x01,0x00,
-//	PLC_BCMPE, 10, 0x20,0x00,    0x01,0x01,
-	//PLC_BACMPL,  3,  10,20,3,    0x20,0x00,   0x01,0x04,
-	//PLC_BACMPE,  3,  10,20,4,    0x20,0x00,   0x01,0x05,
-	//PLC_BACMPB,  3,  10,20,5,   0x20,0x00,   0x01,0x06,
-	PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x01,0x04,
-	PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x02,0x00,
-	PLC_LD, 0x02,0x01,
-	PLC_ANI,0x08,0x00,
-	PLC_OUTT,0x08,0x00,0x00,5,
-
+	//PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x01,0x04,
+	//PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x02,0x00,
+	//PLC_LD, 0x02,0x01,
+	PLC_LDI,0x08,0x00,
+	PLC_OUTT,0x08,0x00,0x00,100,
 	PLC_LDP, 0x08,0x00,
-	PLC_SEI, 0x01,0x00,
+	PLC_SEI, 0x04,0x00,
 
-	PLC_LD,  0x02,0x01,
-	PLC_ANDP,0x00,0x01,
-	PLC_SEI, 0x01,0x01,
+	PLC_LDP, 0x00,0x01,
+	PLC_SEI, 0x04,0x01,
 
-	PLC_LDF, 0x02,0x01,
-	PLC_RST, 0x01,0x01,
+	PLC_LD,  0x04,0x00,
+	PLC_OUT, 0x01,0x00,
+	PLC_LD,  0x04,0x01,
+	PLC_OUT, 0x01,0x01,
+	//PLC_LD,  0x04,0x00,
+	//PLC_OUT, 0x01,0x00,
+	//PLC_LD,  0x02,0x01,
+	//PLC_ANDP,0x00,0x01,
+	//PLC_SEI, 0x01,0x01,
+
+	//PLC_LDF, 0x02,0x01,
+	//PLC_RST, 0x01,0x01,
 
 	PLC_END
 };
@@ -376,14 +379,12 @@ unsigned char get_bitval(unsigned int index)
 		index -= AUXI_RELAY_BASE;
         bitval = BIT_IS_SET(auxi_relays,index);
     } else if(index >= AUXI_HOLDRELAY_BASE && index < (AUXI_HOLDRELAY_BASE + AUXI_HOLDRELAY_COUNT)) {
-#if 0
 		unsigned char B,b,reg;
 		index -= AUXI_HOLDRELAY_BASE;
 		B = index / 8;
 		b = index % 8;
-		RtcRamRead(B,&reg,1);
+		holder_register_read(B,&reg,1);
 		bitval = BIT_IS_SET(&reg,b);
-#endif
 	} else if(index >= TIMING100MS_EVENT_BASE && index < (TIMING100MS_EVENT_BASE+TIMING100MS_EVENT_COUNT)) {
 		index -= TIMING100MS_EVENT_BASE;
         bitval = BIT_IS_SET(tim100ms_arrys.event_bits,index);
@@ -413,15 +414,13 @@ static unsigned char get_last_bitval(unsigned int index)
 		index -= AUXI_RELAY_BASE;
         bitval = BIT_IS_SET(auxi_relays_last,index);
     } else if(index >= AUXI_HOLDRELAY_BASE && index < (AUXI_HOLDRELAY_BASE + AUXI_HOLDRELAY_COUNT)) {
-#if 0
 		unsigned char B,b,reg;
 		index -= AUXI_HOLDRELAY_BASE;
 		index += AUXI_HOLDRELAY_COUNT / 8; //后面一部分是上一次的
 		B = index / 8;
 		b = index % 8;
-		RtcRamRead(B,&reg,1);
+		holder_register_write(B,&reg,1);
 		bitval = BIT_IS_SET(&reg,b);
-#endif
 	} else if(index >= TIMING100MS_EVENT_BASE && index < (TIMING100MS_EVENT_BASE+TIMING100MS_EVENT_COUNT)) {
 		index -= TIMING100MS_EVENT_BASE;
         bitval = BIT_IS_SET(tim100ms_arrys.event_bits_last,index);
@@ -449,15 +448,13 @@ void set_bitval(unsigned int index,unsigned char bitval)
 		index -= AUXI_RELAY_BASE;
         SET_BIT(auxi_relays,index,bitval);
     } else if(index >= AUXI_HOLDRELAY_BASE && index < (AUXI_HOLDRELAY_BASE + AUXI_HOLDRELAY_COUNT)) {
-#if 0
 		unsigned char B,b,reg;
 		index -= AUXI_HOLDRELAY_BASE;
 		B = index / 8;
 		b = index % 8;
-		RtcRamRead(B,&reg,1);
+		holder_register_read(B,&reg,1);
 		SET_BIT(&reg,b,bitval);
-		RtcRamWrite(B,&reg,1);
-#endif
+		holder_register_write(B,&reg,1);
 	} else if(index >= COUNTER_EVENT_BASE && index < (COUNTER_EVENT_BASE+COUNTER_EVENT_COUNT)) {
 	    //计数器的值不可以置位,只可以复位
 		if(!bitval) {
@@ -1428,7 +1425,7 @@ THREAD(plc_thread, arg)
     while(1)
 	{
 		PlcProcess();
-		NutSleep(1);
+		NutSleep(100);
 	}
 }
 
