@@ -41,7 +41,7 @@ extern void plc_set_busy(unsigned char busy);
 extern void set_bitval(unsigned int index,unsigned char bitval);
 extern unsigned char get_bitval(unsigned int index);
 
-extern void plc_code_test_init(void);
+extern void plc_code_resut_to_factory(void);
 
 #define sys_lock()   NutEnterCritical()
 #define sys_unlock() NutExitCritical()

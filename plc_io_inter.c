@@ -56,6 +56,7 @@
 #include "plc_command_def.h"
 #include "plc_prase.h"
 #include "compiler.h"
+#include "eeprom_use_map.h"
 
 #define THISINFO  1
 #define THISERROR 1
@@ -207,4 +208,38 @@ unsigned char get_reset_type(void)
 		return POWERUP_RESET;
 	}
 }
+
+
+unsigned int load_plc_form_eeprom(unsigned int start,unsigned char * buffer,unsigned int len)
+{
+	if(len == 0) {
+		return 0;
+	}
+	if(start >= GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0])) {
+		return 0;
+	}
+	if((start + len) > GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0])) {
+		len -= (start + len) - GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0]);
+	}
+	start += GET_OFFSET_MEM_OF_STRUCT(eeprom_map_t,plc_flash[0]); //加上偏移地址得到真实地址
+	NutNvMemLoad(start,buffer,len);
+	return len;
+}
+
+unsigned int write_plc_to_eeprom(unsigned int start,unsigned char * buffer,unsigned int len)
+{
+	if(len == 0) {
+		return 0;
+	}
+	if(start >= GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0])) {
+		return 0;
+	}
+	if((start + len) > GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0])) {
+		len -= (start + len) - GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0]);
+	}
+	start += GET_OFFSET_MEM_OF_STRUCT(eeprom_map_t,plc_flash[0]); //加上偏移地址得到真实地址
+	NutNvMemSave(start,buffer,len);
+	return len;
+}
+
 

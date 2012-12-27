@@ -274,7 +274,14 @@ FF
 const unsigned char plc_test_flash[256] =
 {
 	0,
-#if 1 //16路上电保持
+	PLC_LDI, 0x08,0x00,
+	PLC_OUTT,0x08,0x00,0x00,10,
+
+	PLC_LDP, 0x08,0x00,
+	PLC_SEI, 0x01,0x00,
+
+
+#if 0 //16路上电保持
 	PLC_LDI, 0x06,0x00,
 	PLC_JMPS,0x00,101,
 
@@ -391,22 +398,15 @@ const unsigned char plc_test_flash[256] =
 
 int compare_rom(const unsigned char * dat,unsigned int len)
 {
-#if 0
 	unsigned int i;
-	unsigned int base = GET_OFFSET_MEM_OF_STRUCT(My_APP_Info_Struct,plc_programer);
-
-	
 	for(i=0;i<sizeof(plc_test_flash);i++) {
-		XEEBeginRead(base+i);
-		if(XEERead() != plc_test_flash[i]) {
-			XEEEndRead();
-			PrintStringNum("error addr:",base+i);
-			return -1;
+		unsigned char reg;
+		load_plc_form_eeprom(i,&reg,1);
+		if(reg != dat[i]) {
+			return 0;
 		}
-		XEEEndRead();
 	}
-#endif
-	return 0;
+	return 1;
 }
 
 /**********************************************
@@ -414,53 +414,22 @@ int compare_rom(const unsigned char * dat,unsigned int len)
  *  也许是从EEPROM中读取的程序脚本
  *  这里一次性读取下一个指令，长度为最长指令长度
  */
-void plc_code_test_init(void)
+void plc_code_resut_to_factory(void)
 {
-#if 0
-	unsigned int i;
-	unsigned int base = GET_OFFSET_MEM_OF_STRUCT(My_APP_Info_Struct,plc_programer);
-
-
-	for(i=0;i<sizeof(plc_test_flash);i++) {
-		XEEBeginWrite(base+i);
-		XEEWrite(plc_test_flash[i]);
-		XEEEndWrite();
-	}
-	
-
 	if(!compare_rom(plc_test_flash,sizeof(plc_test_flash))) {
-		PrintStringNum("\r\ncompare successful!",0);
+	    write_plc_to_eeprom(0,plc_test_flash,sizeof(plc_test_flash));
+		if(THIS_INFO)printf(" write plc to default.\r\n");
 	} else {
-		PrintStringNum("\r\ncompare failed.",0);
+		if(THIS_INFO)printf(" plc compare_rom successful.\r\n");
 	}
-
-
-	PrintStringNum("\r\noffset of programmer :",base);
-	PrintStringNum("\r\nsize of programmer :",sizeof(My_APP_Info_Struct) - base);
-	PrintStringNum("\r\nsize of My_APP_Info_Struct :",sizeof(My_APP_Info_Struct));
-#endif
 }
 
 void read_next_plc_code(void)
 {
-#if 0
-	unsigned int i;
-	unsigned int base = GET_OFFSET_MEM_OF_STRUCT(My_APP_Info_Struct,plc_programer);
-	unsigned int size = sizeof(My_APP_Info_Struct) - base;
-	if((plc_command_index + sizeof(plc_command_array)) > size) {
-		//不允许读别的内存
-		plc_command_index = 0;
-	}
-	base = plc_command_index + base + 1;
-	XEEBeginRead(base);
-	for(i=0;i<sizeof(plc_command_array);i++) {
-		plc_command_array[i] = XEERead();
-	}
-	XEEEndRead();
-	//dumpstrhex("CMD:",plc_command_array,3);
+#if 1
+	load_plc_form_eeprom(plc_command_index+1,plc_command_array,sizeof(plc_command_array));
 #else
 	memcpy(plc_command_array,&plc_test_flash[plc_command_index+1],sizeof(plc_command_array));
-	//strncpypgm2ram(plc_command_array,&plc_test_flash[plc_command_index+1],sizeof(plc_command_array));
 #endif
 }
 
@@ -1574,7 +1543,7 @@ THREAD(plc_thread, arg)
     while(1)
 	{
 		PlcProcess();
-		NutSleep(10);
+		NutSleep(50);
 	}
 }
 

@@ -57,7 +57,7 @@
 #define    PLC_NETWW   41
 
 #define    PLC_LDKL    42
-#define    PLC_SEI     43 //有输入，即取反
+#define    PLC_SEI     43 //有输入，即取反 //2B
 
 #define    PLC_JMP     44  //无条件跳转
 #define    PLC_JMPS    45  //条件真跳转

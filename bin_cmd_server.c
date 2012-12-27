@@ -49,6 +49,8 @@
 #include "io_time_ctl.h"
 #include "sys_var.h"
 #include "bsp.h"
+#include "compiler.h"
+#include "plc_io_inter.h"
 
 #define THISINFO          0
 #define THISERROR         0
@@ -1236,9 +1238,80 @@ int CmdWriteRegister(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     return CmdIoFinish(sock,tcmd,act_size);
 }
 
+void CmdPlcRead(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	typedef struct _plc_rw
+	{
+		unsigned char cmd;
+		unsigned char start_addr_hi;
+		unsigned char start_addr_lo;
+		unsigned char data_len_hi;
+		unsigned char data_len_lo;
+		//后面接着是数据
+		//unsigned char data_base;
+	} plc_rw;
+	plc_rw * pw = (plc_rw *)cmd;
+	unsigned char buffer[158];  //读最大数量
+	plc_rw * pack = (plc_rw *)buffer;
+	unsigned char *pbuf = ((unsigned char *)buffer) + sizeof(plc_rw);
+	if(datasize >= sizeof(plc_rw)) {
+		unsigned int  len = HSB_BYTES_TO_WORD(&pw->data_len_hi);
+		if(len > sizeof(buffer) - sizeof(plc_rw)) {
+			len = sizeof(buffer) - sizeof(plc_rw);
+		}
+		memcpy(pack,pw,sizeof(plc_rw));
+		if(len > 0) {
+		    len = load_plc_form_eeprom(HSB_BYTES_TO_WORD(&pw->start_addr_hi),pbuf,len);
+			pack->data_len_hi = len >> 8;
+			pack->data_len_lo = len & 0xFF;
+		} else {
+			pack->data_len_hi = 0;
+			pack->data_len_lo = 0;
+		}
+	    //把数据返回
+	    NutTcpSend(sock,pack,sizeof(plc_rw)+len);
+	} else {
+		//无效的指令
+	}
+}
+void CmdPlcWrite(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+{
+	typedef struct _plc_rw
+	{
+		unsigned char cmd;
+		unsigned char start_addr_hi;
+		unsigned char start_addr_lo;
+		unsigned char data_len_hi;
+		unsigned char data_len_lo;
+		//后面接着是数据
+		//unsigned char data_base;
+	} plc_rw;
+	plc_rw * pw = (plc_rw *)cmd;
+	unsigned char *pbuf = ((unsigned char *)cmd) + sizeof(plc_rw);
+	if(datasize > sizeof(plc_rw)) {
+		unsigned int  len = HSB_BYTES_TO_WORD(&pw->data_len_hi);
+		if((datasize - sizeof(plc_rw)) < len) {
+			len = (datasize - sizeof(plc_rw));
+		}
+		if(len > 0) {
+		    len = write_plc_to_eeprom(HSB_BYTES_TO_WORD(&pw->start_addr_hi),pbuf,len);
+			pw->data_len_hi = len >> 8;
+			pw->data_len_lo = len & 0xFF;
+		} else {
+			pw->data_len_hi = 0;
+			pw->data_len_lo = 0;
+		}
+	    //把数据返回
+	    NutTcpSend(sock,pw,sizeof(plc_rw)+len);
+	} else {
+		//无效的指令
+	}
+}
 
 const CmdMapToCmdCallType CmdCallMap[] = 
 {
+	{CMD_PLC_READ,CmdPlcRead},
+	{CMD_PLC_WRITE,CmdPlcWrite},
 	{CMD_READ_REGISTER,CmdReadRegister},
 	{CMD_WRITE_REGISTER,CmdWriteRegister},
 	{CMD_GET_IO_OUT_VALUE,CmdGetIoOutValue},
@@ -1289,9 +1362,14 @@ void BinCmdPrase(TCPSOCKET * sock,void * buff,int len)
 {
 	uint8_t i;
 	CmdHead * cmd = (CmdHead *)buff;
-	if(len < sizeof(CmdHead)) {
+	if(len  == 0) {
 		return ;
 	}
+	if(cmd->cmd < CMD_PLC_READ) {  //从这个指令之后，都是简易指令，不在提供复杂功能
+	    if(len < sizeof(CmdHead)) {
+		    return ;
+	    }
+    }
 	if(THISINFO)DumpCommandRawData(buff,len);
 	i = 0;
 	while(1) {

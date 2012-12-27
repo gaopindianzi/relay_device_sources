@@ -92,10 +92,12 @@
 #include "plc_prase.h"
 #include "sys_var.h"
 #include "bsp.h"
+#include "eeprom_use_map.h"
+#include "compiler.h"
 
 #include "debug.h"
 
-#define THISINFO       0
+#define THISINFO       1
 #define THISERROR      1
 #define THISASSERT     1
 
@@ -159,7 +161,9 @@ int main(void)
 	NutThreadSetPriority(MAIN_RTC_TIME_PRI);
 
 	if(THISINFO)printf("\r\n\r\nOS Start %s \r\n",NutVersionString());
-
+	if(THISINFO)printf("eeprom_map_t size = %d\r\n",sizeof(eeprom_map_t));
+	if(THISINFO)printf("start plc addr:0x%x\r\n", GET_OFFSET_MEM_OF_STRUCT(eeprom_map_t,plc_flash[0]));
+	if(THISINFO)printf("plc flash size:%d\r\n",  GET_MEM_SIZE_OF_STRUCT(eeprom_map_t,plc_flash[0]));
 
 	if(BspReadFactoryOut() != 0x55) {
 		CmdIpConfigData cid;
@@ -205,6 +209,8 @@ int main(void)
 		//保存更新
 #endif		
 		input_set_default_param();  //设置输入控制参数
+
+		plc_code_resut_to_factory();
 
 		BspWriteFactoryOut(0x55);
 		BspWriteFactoryOut(0x55);

@@ -106,7 +106,7 @@ int BspAvrResetType(void);
 #define INPUT_NUM                    32
 #define OUTPUT_NUM                   32
 
-#define  SYS_TIMING_COUNT_MAX        60
+#define  SYS_TIMING_COUNT_MAX        32
 
 #define BSP_IP_ADDR_OFFSET           128
 
