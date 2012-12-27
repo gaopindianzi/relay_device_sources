@@ -1,0 +1,175 @@
+#include <cfg/os.h>
+
+#include <string.h>
+#include <io.h>
+#include <fcntl.h>
+#include <time.h>
+
+#include <dev/board.h>
+#include <dev/urom.h>
+#include <dev/nplmmc.h>
+#include <dev/sbimmc.h>
+#include <fs/phatfs.h>
+
+#include <sys/version.h>
+#include <sys/thread.h>
+#include <sys/timer.h>
+#include <sys/heap.h>
+#include <sys/confnet.h>
+#include <sys/socket.h>
+
+#include <arpa/inet.h>
+#include <net/route.h>
+#include <errno.h>
+
+#include <pro/httpd.h>
+#include <pro/dhcp.h>
+#include <pro/ssi.h>
+#include <pro/asp.h>
+#include <pro/discover.h>
+
+#include <dev/board.h>
+#include <dev/gpio.h>
+#include <cfg/arch/avr.h>
+#include <dev/nvmem.h>
+#include <time.h>
+#include <sys/mutex.h>
+#include <sys/atom.h>
+
+#ifdef NUTDEBUG
+#include <sys/osdebug.h>
+#include <net/netdebug.h>
+#endif
+
+#include "sysdef.h"
+#include "bin_command_def.h"
+#include "bsp.h"
+#include "time_handle.h"
+#include "io_time_ctl.h"
+#include <dev/relaycontrol.h>
+#include "sys_var.h"
+#include "io_out.h"
+#include "debug.h"
+
+#include "plc_command_def.h"
+#include "plc_prase.h"
+#include "compiler.h"
+
+#define THISINFO  1
+#define THISERROR 1
+
+extern unsigned char io_out[32/8];
+
+
+unsigned int phy_io_in_get_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	unsigned char buffer[2];
+	//uint32_t tmp;
+
+	memset(iobits,0,(bitcount+7)/8);
+
+	//_ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
+	//参数必须符合条件
+	if(startbits >= INPUT_CHANNEL_NUM || bitcount == 0) {
+		//printf("io_in_get bit param error1:startbits = %d , bit count = %d\r\n",startbits,bitcount);
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((INPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = INPUT_CHANNEL_NUM - startbits;
+	}
+	//printf("io_in_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//开始设置
+	index = 0;
+	//
+	_ioctl(_fileno(sys_varient.iofile), IO_IN_GET, buffer);
+	
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(buffer[i/8]&code_msk[i%8]) {
+			iobits[Bb] |=  code_msk[Bi];
+		} else {
+			iobits[Bb] &= ~code_msk[Bi];
+		}
+		index++;
+	}
+	return bitcount;
+}
+
+unsigned int phy_io_out_get_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	//uint32_t tmp;
+
+	memset(iobits,0,(bitcount+7)/8);
+
+	//_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+	//参数必须符合条件
+
+	if(startbits >= OUTPUT_CHANNEL_NUM || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = OUTPUT_CHANNEL_NUM - startbits;
+	}
+	//printf("io_out_get_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	//开始设置
+	index = 0;
+	
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(io_out[i/8]&code_msk[i%8]) {
+			iobits[Bb] |=  code_msk[Bi];
+		} else {
+			iobits[Bb] &= ~code_msk[Bi];
+		}
+		index++;
+	}
+	return bitcount;
+}
+
+
+extern unsigned char switch_signal_hold_time[32];
+extern unsigned char io_out[32/8];
+extern unsigned char io_input_on_msk[32/8];
+extern unsigned char io_pluase_time_count;
+
+
+unsigned int phy_io_out_set_bits(unsigned int startbits,unsigned char * iobits,unsigned int bitcount)
+{
+	unsigned int i,index;
+	unsigned char Bb,Bi;
+	//uint32_t tmp;
+	//_ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
+	//参数必须符合条件
+	if(startbits >= OUTPUT_CHANNEL_NUM || bitcount == 0) {
+		return 0;
+	}
+	//进一步判断是否符合条件
+	if((OUTPUT_CHANNEL_NUM - startbits) < bitcount) {
+		bitcount = OUTPUT_CHANNEL_NUM - startbits;
+	}
+	//开始设置
+	//printf("io_out_set_bits startbits = %d , bit count = %d\r\n",startbits,bitcount);
+	index = 0;
+	for(i=startbits;i<startbits+bitcount;i++) {
+	    Bb = index / 8;
+	    Bi = index % 8;
+		if(iobits[Bb]&code_msk[Bi]) {
+			io_out[i/8] |=  code_msk[i%8];
+			switch_signal_hold_time[i] = io_pluase_time_count;
+		} else {
+			io_out[i/8] &= ~code_msk[i%8];
+			switch_signal_hold_time[i] = 0;
+		}
+		index++;
+	}
+	NutEventPost(&(sys_varient.io_out_event));
+	return bitcount;
+}
