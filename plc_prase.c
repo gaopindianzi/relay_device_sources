@@ -108,6 +108,13 @@ unsigned char output_new[BITS_TO_BS(IO_OUTPUT_COUNT)];
 //辅助继电器
 unsigned char auxi_relays[BITS_TO_BS(AUXI_RELAY_COUNT)];
 unsigned char auxi_relays_last[BITS_TO_BS(AUXI_RELAY_COUNT)];
+//特殊寄存器
+unsigned char speicial_relays[BITS_TO_BS(SPECIAL_RELAY_COUNT)];
+unsigned char speicial_relays_last[BITS_TO_BS(SPECIAL_RELAY_COUNT)];
+//保持寄存器影像，读再次，写包括写物理期间
+unsigned char hold_register_map[BITS_TO_BS(AUXI_HOLDRELAY_COUNT)];
+unsigned char hold_register_map_last[BITS_TO_BS(AUXI_HOLDRELAY_COUNT)];
+unsigned char hold_durty = 0;
 //字节变量，通用变量
 unsigned char general_reg[REG_COUNT];   //普通变量
 //RTC实时时间影像寄存器，没秒更新一次自动变化
@@ -200,6 +207,16 @@ void PlcInit(void)
 	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
     memset(auxi_relays,0,sizeof(auxi_relays));
     memset(auxi_relays_last,0,sizeof(auxi_relays_last));
+
+	memset(speicial_relays,0,sizeof(speicial_relays));
+	memset(speicial_relays_last,0,sizeof(speicial_relays_last));
+	{ //复位状态简单的初始化为1，即表示上电标志（此位人工清零）
+		SET_BIT(speicial_relays,0,1);
+	}
+	//初始化保持寄存器
+	holder_register_read(0,hold_register_map,sizeof(hold_register_map));
+	memcpy(hold_register_map_last,hold_register_map,sizeof(hold_register_map));
+	//
 	plc_command_index = 0;
 	memset(output_new,0,sizeof(output_new));
 	memset(output_last,0,sizeof(output_last));
@@ -253,33 +270,121 @@ FF
 */
 
 
-const unsigned char plc_test_flash[128] =
+const unsigned char plc_test_flash[256] =
 {
 	0,
-	//PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x01,0x04,
-	//PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x02,0x00,
-	//PLC_LD, 0x02,0x01,
-	PLC_LDI,0x08,0x00,
-	PLC_OUTT,0x08,0x00,0x00,100,
-	PLC_LDP, 0x08,0x00,
-	PLC_SEI, 0x04,0x00,
-
-	PLC_LDP, 0x00,0x01,
-	PLC_SEI, 0x04,0x01,
+#if 1 //16路上电保持
+	PLC_LDI, 0x06,0x00,
+	PLC_JMPS,0x00,101,
 
 	PLC_LD,  0x04,0x00,
-	PLC_OUT, 0x01,0x00,
+	PLC_OUT, 0x02,0x00,
 	PLC_LD,  0x04,0x01,
+	PLC_OUT, 0x02,0x01,
+	PLC_LD,  0x04,0x02,
+	PLC_OUT, 0x02,0x02,
+	PLC_LD,  0x04,0x03,
+	PLC_OUT, 0x02,0x03,
+	PLC_LD,  0x04,0x04,
+	PLC_OUT, 0x02,0x04,
+	PLC_LD,  0x04,0x05,
+	PLC_OUT, 0x02,0x05,
+	PLC_LD,  0x04,0x06,
+	PLC_OUT, 0x02,0x06,
+	PLC_LD,  0x04,0x07,
+	PLC_OUT, 0x02,0x07,
+
+	PLC_LD,  0x04,0x08,
+	PLC_OUT, 0x02,0x08,
+	PLC_LD,  0x04,0x09,
+	PLC_OUT, 0x02,0x09,
+	PLC_LD,  0x04,0x0a,
+	PLC_OUT, 0x02,0x0a,
+	PLC_LD,  0x04,0x0b,
+	PLC_OUT, 0x02,0x0b,
+	PLC_LD,  0x04,0x0c,
+	PLC_OUT, 0x02,0x0c,
+	PLC_LD,  0x04,0x0d,
+	PLC_OUT, 0x02,0x0d,
+	PLC_LD,  0x04,0x0e,
+	PLC_OUT, 0x02,0x0e,
+	PLC_LD,  0x04,0x0f,
+	PLC_OUT, 0x02,0x0f,
+
+	PLC_LDKL,
+	PLC_OUT, 0x06,0x00,
+
+	PLC_END,
+
+
+	PLC_LD,  0x02,0x00,
+	PLC_OUT, 0x01,0x00,
+	PLC_OUT, 0x04,0x00,
+	PLC_LD,  0x02,0x01,
 	PLC_OUT, 0x01,0x01,
-	//PLC_LD,  0x04,0x00,
-	//PLC_OUT, 0x01,0x00,
-	//PLC_LD,  0x02,0x01,
-	//PLC_ANDP,0x00,0x01,
-	//PLC_SEI, 0x01,0x01,
+	PLC_OUT, 0x04,0x01,
+	PLC_LD,  0x02,0x02,
+	PLC_OUT, 0x01,0x02,
+	PLC_OUT, 0x04,0x02,
+	PLC_LD,  0x02,0x03,
+	PLC_OUT, 0x01,0x03,
+	PLC_OUT, 0x04,0x03,
+	PLC_LD,  0x02,0x04,
+	PLC_OUT, 0x01,0x04,
+	PLC_OUT, 0x04,0x04,
+	PLC_LD,  0x02,0x05,
+	PLC_OUT, 0x01,0x05,
+	PLC_OUT, 0x04,0x05,
+	PLC_LD,  0x02,0x06,
+	PLC_OUT, 0x01,0x06,
+	PLC_OUT, 0x04,0x06,
+	PLC_LD,  0x02,0x07,
+	PLC_OUT, 0x01,0x07,
+	PLC_OUT, 0x04,0x07,
 
-	//PLC_LDF, 0x02,0x01,
-	//PLC_RST, 0x01,0x01,
-
+	PLC_LD,  0x02,0x08,
+	PLC_OUT, 0x01,0x08,
+	PLC_OUT, 0x04,0x08,
+	PLC_LD,  0x02,0x09,
+	PLC_OUT, 0x01,0x09,
+	PLC_OUT, 0x04,0x09,
+	PLC_LD,  0x02,0x0a,
+	PLC_OUT, 0x01,0x0a,
+	PLC_OUT, 0x04,0x0a,
+	PLC_LD,  0x02,0x0b,
+	PLC_OUT, 0x01,0x0b,
+	PLC_OUT, 0x04,0x0b,
+	PLC_LD,  0x02,0x0c,
+	PLC_OUT, 0x01,0x0c,
+	PLC_OUT, 0x04,0x0c,
+	PLC_LD,  0x02,0x0d,
+	PLC_OUT, 0x01,0x0d,
+	PLC_OUT, 0x04,0x0d,
+	PLC_LD,  0x02,0x0e,
+	PLC_OUT, 0x01,0x0e,
+	PLC_OUT, 0x04,0x0e,
+	PLC_LD,  0x02,0x0f,
+	PLC_OUT, 0x01,0x0f,
+	PLC_OUT, 0x04,0x0f,
+#endif
+#if 0 //8普通
+	PLC_LD,  0x02,0x00,
+	PLC_OUT, 0x01,0x00,
+	PLC_LD,  0x02,0x01,
+	PLC_OUT, 0x01,0x01,
+	PLC_LD,  0x02,0x02,
+	PLC_OUT, 0x01,0x02,
+	PLC_LD,  0x02,0x03,
+	PLC_OUT, 0x01,0x03,
+	PLC_LD,  0x02,0x04,
+	PLC_OUT, 0x01,0x04,
+	PLC_LD,  0x02,0x05,
+	PLC_OUT, 0x01,0x05,
+	PLC_LD,  0x02,0x06,
+	PLC_OUT, 0x01,0x06,
+	PLC_LD,  0x02,0x07,
+	PLC_OUT, 0x01,0x07,
+#endif
 	PLC_END
 };
 
@@ -379,12 +484,16 @@ unsigned char get_bitval(unsigned int index)
 		index -= AUXI_RELAY_BASE;
         bitval = BIT_IS_SET(auxi_relays,index);
     } else if(index >= AUXI_HOLDRELAY_BASE && index < (AUXI_HOLDRELAY_BASE + AUXI_HOLDRELAY_COUNT)) {
-		unsigned char B,b,reg;
+		//unsigned char B,b,reg;
 		index -= AUXI_HOLDRELAY_BASE;
-		B = index / 8;
-		b = index % 8;
-		holder_register_read(B,&reg,1);
-		bitval = BIT_IS_SET(&reg,b);
+		//B = index / 8;
+		//b = index % 8;
+		//holder_register_read(B,&reg,1);
+		bitval = BIT_IS_SET(hold_register_map,index);
+	} else if(index >= SPECIAL_RELAY_BASE && index < (SPECIAL_RELAY_BASE+SPECIAL_RELAY_COUNT)) {
+		//读取上电保持继电器状态，人工清零 
+		index -= SPECIAL_RELAY_BASE;
+		bitval = BIT_IS_SET(speicial_relays,index);
 	} else if(index >= TIMING100MS_EVENT_BASE && index < (TIMING100MS_EVENT_BASE+TIMING100MS_EVENT_COUNT)) {
 		index -= TIMING100MS_EVENT_BASE;
         bitval = BIT_IS_SET(tim100ms_arrys.event_bits,index);
@@ -414,13 +523,18 @@ static unsigned char get_last_bitval(unsigned int index)
 		index -= AUXI_RELAY_BASE;
         bitval = BIT_IS_SET(auxi_relays_last,index);
     } else if(index >= AUXI_HOLDRELAY_BASE && index < (AUXI_HOLDRELAY_BASE + AUXI_HOLDRELAY_COUNT)) {
-		unsigned char B,b,reg;
+		//unsigned char B,b,reg;
 		index -= AUXI_HOLDRELAY_BASE;
-		index += AUXI_HOLDRELAY_COUNT / 8; //后面一部分是上一次的
-		B = index / 8;
-		b = index % 8;
-		holder_register_write(B,&reg,1);
-		bitval = BIT_IS_SET(&reg,b);
+		//index += AUXI_HOLDRELAY_COUNT / 8; //后面一部分是上一次的
+		//B = index / 8;
+		//b = index % 8;
+		//holder_register_read(B,&reg,1);
+		//bitval = BIT_IS_SET(&reg,b);
+		bitval = BIT_IS_SET(hold_register_map_last,index);
+	} else if(index >= SPECIAL_RELAY_BASE && index < (SPECIAL_RELAY_BASE+SPECIAL_RELAY_COUNT)) {
+		//读取上电保持继电器状态，人工清零 
+		index -= SPECIAL_RELAY_BASE;
+		bitval = BIT_IS_SET(speicial_relays_last,index);
 	} else if(index >= TIMING100MS_EVENT_BASE && index < (TIMING100MS_EVENT_BASE+TIMING100MS_EVENT_COUNT)) {
 		index -= TIMING100MS_EVENT_BASE;
         bitval = BIT_IS_SET(tim100ms_arrys.event_bits_last,index);
@@ -448,13 +562,19 @@ void set_bitval(unsigned int index,unsigned char bitval)
 		index -= AUXI_RELAY_BASE;
         SET_BIT(auxi_relays,index,bitval);
     } else if(index >= AUXI_HOLDRELAY_BASE && index < (AUXI_HOLDRELAY_BASE + AUXI_HOLDRELAY_COUNT)) {
-		unsigned char B,b,reg;
+		//unsigned char B,b,reg;
 		index -= AUXI_HOLDRELAY_BASE;
-		B = index / 8;
-		b = index % 8;
-		holder_register_read(B,&reg,1);
-		SET_BIT(&reg,b,bitval);
-		holder_register_write(B,&reg,1);
+		//B = index / 8;
+		//b = index % 8;
+		//holder_register_read(B,&reg,1);
+		//SET_BIT(&reg,b,bitval);
+		//holder_register_write(B,&reg,1);
+		SET_BIT(hold_register_map,index,bitval);
+		hold_durty = 1;
+	} else if(index >= SPECIAL_RELAY_BASE && index < (SPECIAL_RELAY_BASE+SPECIAL_RELAY_COUNT)) {
+		//读取上电保持继电器状态，人工清零 
+		index -= SPECIAL_RELAY_BASE;
+		SET_BIT(speicial_relays,index,bitval);
 	} else if(index >= COUNTER_EVENT_BASE && index < (COUNTER_EVENT_BASE+COUNTER_EVENT_COUNT)) {
 	    //计数器的值不可以置位,只可以复位
 		if(!bitval) {
@@ -989,7 +1109,7 @@ void handle_plc_bacmp(void)
 	unsigned char * pk  = &plc->k_base;
 	unsigned int base   = HSB_BYTES_TO_WORD(&pacmp->b_base_hi);
 	unsigned int out    = HSB_BYTES_TO_WORD(&pacmp->out_hi);
-	unsigned char result;
+	unsigned char result = 0;
 	//从右边比起
 	if(plc->cmd == PLC_BACMPB) {
 		unsigned char i;
@@ -1147,6 +1267,31 @@ void handle_plc_bzcp(void)
 	}
 	plc_command_index += sizeof(plc_command);
 }
+
+/**********************************************
+ * 跳转和条件跳转指令
+ */
+void handle_plc_jmp(void)
+{
+	typedef struct _plc_command
+	{
+		unsigned char cmd;
+		unsigned char jmp_step_hi;
+		unsigned char jmp_step_lo;
+	} plc_command;
+	plc_command * plc = (plc_command *)plc_command_array;
+	unsigned int step = HSB_BYTES_TO_WORD(&plc->jmp_step_hi);
+	if(plc->cmd == PLC_JMPS) {
+		if(bit_acc) {
+		    plc_command_index += step;
+		}
+	} else if(plc->cmd == PLC_JMP) {
+	    plc_command_index += step;
+	}
+	plc_command_index += sizeof(plc_command);
+}
+
+
 
 
 
@@ -1364,6 +1509,10 @@ void PlcProcess(void)
 	case PLC_BAZCP:
 		handle_plc_bazcp();
 		break;
+	case PLC_JMP:
+	case PLC_JMPS:
+		handle_plc_jmp();
+		break;
     case PLC_NETWB:
     case PLC_NETRW:
     case PLC_NETWW:
@@ -1386,17 +1535,16 @@ void PlcProcess(void)
 	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
 	//辅助继电器
 	memcpy(auxi_relays_last,auxi_relays,sizeof(auxi_relays));
-	//
-#if 0
-	{//保持继电器的内存搬移
-		unsigned int i;
-		unsigned char reg;
-		for(i=0;i<AUXI_HOLDRELAY_COUNT/8;i++) { //RTC内存字节数的一半
-			RtcRamRead(i,&reg,1);
-			RtcRamWrite(i+AUXI_HOLDRELAY_COUNT/8,&reg,1); //拷贝到后半部分
+	//特殊继电器
+	memcpy(speicial_relays_last,speicial_relays,sizeof(speicial_relays));
+	{ //写到RTC芯片中
+		if(hold_durty) { //脏了，必须写回去
+		    holder_register_write(0,hold_register_map,sizeof(hold_register_map));
+			hold_durty = 0;
 		}
+		//保持继电器的内存搬移
+		memcpy(hold_register_map_last,hold_register_map,sizeof(hold_register_map));
 	}
-#endif
 	//系统时间处理，可以拿到定时器中断处理
 	memcpy(tim100ms_arrys.event_bits_last,tim100ms_arrys.event_bits,sizeof(tim100ms_arrys.event_bits));
 	//
@@ -1420,12 +1568,12 @@ void PlcProcess(void)
 THREAD(plc_thread, arg)
 {
 	if(THIS_INFO)printf("plc_thread run...\r\n");
-	NutThreadSetPriority(IO_AND_TIMING_SCAN_RPI);
+	NutThreadSetPriority(PLC_PRIORITY_LEVEL);
 	PlcInit();
     while(1)
 	{
 		PlcProcess();
-		NutSleep(100);
+		NutSleep(10);
 	}
 }
 

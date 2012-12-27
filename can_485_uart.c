@@ -53,6 +53,8 @@
 #include <cfg/platform_def.h>
 #include "io_out.h"
 #include "sys_var.h"
+#include "io_out.h"
+#include "compiler.h"
 #include "bsp.h"
 
 
@@ -148,55 +150,97 @@ int Modbus_Command_Prase(unsigned char * buffer,unsigned char len,unsigned char 
 	switch(pcmd->command) {
 		case MODBUS_SET_RELAY:
 		{
-		    rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, pst->ioary);
+			io_out_set_bits(0,pst->ioary,16);
+			rc = 0;
+		    //rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, pst->ioary);
 		}
 		break;
     	case MODBUS_SET_ONEBIT:
 		{
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, pst->ioary);
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
+			unsigned char reg = 0x01;
+			unsigned int index = LSB_BYTES_TO_WORD(pst->ioary);
+			io_out_set_bits(index,&reg,1);
+			io_out_get_bits(0,pst->ioary,16);
+			rc = 0;
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, pst->ioary);
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 	    }
 	    break;
 	    case MODBUS_CLR_ONTBIT:
 	    {
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, pst->ioary);
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
+			unsigned char reg = 0x00;
+			unsigned int index = LSB_BYTES_TO_WORD(pst->ioary);
+			io_out_set_bits(index,&reg,1);
+			io_out_get_bits(0,pst->ioary,16);
+			rc = 0;
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, pst->ioary);
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 	    case MODBUS_VERT_OUTPUT:
 	    {
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, pst->ioary);
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
+			unsigned char reg = 0x01;
+			io_out_convert_bits(0,pst->ioary,16);
+			io_out_get_bits(0,pst->ioary,16);
+			rc = 0;
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, pst->ioary);
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 	    break;
 		case MODBUS_SET_BITMAP:
 		{
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_SET_BITMAP, pst->ioary);
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
+			unsigned int i;
+			for(i=0;i<16;i++) {
+				if(BIT_IS_SET(pst->ioary,i)) {
+					unsigned char reg = 0x01;
+					io_out_set_bits(i,&reg,1);
+				}
+			}
+			io_out_get_bits(0,pst->ioary,16);
+			rc = 0;
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_SET_BITMAP, pst->ioary);
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 		case MODBUS_CLR_BITMAP:
 		{
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_CLR_BITMAP, pst->ioary);
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
+			unsigned int i;
+			for(i=0;i<16;i++) {
+				if(BIT_IS_SET(pst->ioary,i)) {
+					unsigned char reg = 0x00;
+					io_out_set_bits(i,&reg,1);
+				}
+			}
+			io_out_get_bits(0,pst->ioary,16);
+			rc = 0;
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_CLR_BITMAP, pst->ioary);
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 		case MODBUS_READ_RELAY:
 		if(flag == MODBUS_DEVICE_PACKET) {
 		    scmd->data_len = 2;
-		    rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
+			io_out_get_bits(0,pst->ioary,16);
+			rc = 0;
+		    //rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, pst->ioary);
 		}
 		break;
 	    case MODBUS_READ_INPUT:
 	    if(flag == MODBUS_DEVICE_PACKET) {
 			scmd->data_len = 2;
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, pst->ioary);
+			io_in_get_bits(0,pst->ioary,16);
+			rc = 0;
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, pst->ioary);
 		}
 		break;
 		case MODBUS_GET_ONEBIT:
 		if(flag == MODBUS_DEVICE_PACKET) {
+			unsigned char reg = 0x00;
+			io_out_get_bits(LSB_BYTES_TO_WORD(pst->ioary),&reg,1);
+			pst->ioary[0] = reg?0xFF:0x00;
+			pst->ioary[1] = 0x00;
 			scmd->data_len = 2;
-			rc = _ioctl(_fileno(sys_varient.iofile), IO_GET_ONEBIT, pst->ioary);
+			//rc = _ioctl(_fileno(sys_varient.iofile), IO_GET_ONEBIT, pst->ioary);
 		}
 		break;
 		case MODBUS_SET_ADDRESS:

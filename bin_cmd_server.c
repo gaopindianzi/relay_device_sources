@@ -292,18 +292,9 @@ int CmdGetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	CmdHead       * tcmd  = (CmdHead *)buffer;
 	CmdIoValue    *  sio  = (CmdIoValue *)GET_CMD_DATA(tcmd);
 	//
-	//uint32_t tmp;
     datasize = datasize;
-    //
-    //sio->io_count    = 32;
-    //sio->io_value[0] = (uint8_t)((relay_msk >> 0) & 0xFF);
-    //sio->io_value[1] = (uint8_t)((relay_msk >> 8) & 0xFF);;
-    //sio->io_value[2] = (uint8_t)((relay_msk >> 16) & 0xFF);;
-    //sio->io_value[3] = (uint8_t)((relay_msk >> 24) & 0xFF);;
-	//rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
-	//sio->io_count = (unsigned char)tmp;
-	//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
 	//
+	memset(sio->io_value,0,sizeof(sio->io_value));
 	sio->io_count = io_out_get_bits(0,sio->io_value,32);
 	rc = 0;
     //
@@ -339,6 +330,7 @@ int CmdSetIoOutValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 		//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, io->io_value);
 		//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_value);
 		                io_out_set_bits(0,io->io_value,32);
+		memset(sio->io_value,0,sizeof(sio->io_value));
 	    sio->io_count = io_out_get_bits(0,sio->io_value,32);
 	    rc = 0;
 
@@ -383,6 +375,7 @@ int CmdRevertIoOutIndex(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	//rc = _ioctl(_fileno(sys_varient.iofile), IO_SIG_BITMAP, io->io_msk);
 	//rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, sio->io_msk);
 	io_out_convert_bits(0,io->io_msk,32);
+	memset(sio->io_msk,0,sizeof(sio->io_msk));
 	io_out_get_bits(0,sio->io_msk,32);
 	rc = 0;
 
@@ -423,6 +416,7 @@ int CmdSetIoOutOneBit(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	num += io->io_bitnum[0];
 	reg = code_msk[0];
 	io_out_set_bits(num,&reg,1);
+	memset(sio->io_value,0,sizeof(sio->io_value));
 	sio->io_count = io_out_get_bits(0,sio->io_value,32);
 	rc = 0;
 
@@ -462,6 +456,7 @@ int CmdClrIoOutOneBit(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	num += io->io_bitnum[0];
 	reg = 0;
 	io_out_set_bits(num,&reg,1);
+	memset(sio->io_value,0,sizeof(sio->io_value));
 	sio->io_count = io_out_get_bits(0,sio->io_value,32);
 	rc = 0;
 
@@ -502,6 +497,7 @@ int CmdRevIoOutOneBit(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	reg = code_msk[0];
 	printf("rev io one bit ,num = %d\r\n",num);
 	io_out_convert_bits(num,&reg,1);
+	memset(sio->io_value,0,sizeof(sio->io_value));
 	sio->io_count = io_out_get_bits(0,sio->io_value,32);
 	rc = 0;
 
@@ -532,6 +528,7 @@ int CmdGetIoInValue(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	//if(tmp) {
 		//rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, sio->io_value);
 	//}
+	memset(sio->io_value,0,sizeof(sio->io_value));
 	sio->io_count = io_in_get_bits(0,sio->io_value,32);
 	rc = 0;
 

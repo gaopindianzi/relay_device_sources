@@ -341,7 +341,7 @@ unsigned int io_out_set_bits(unsigned int startbits,unsigned char * iobits,unsig
 {
 	unsigned int i;
 	for(i=0;i<bitcount;i++) {
-	    set_bitval(IO_OUTPUT_BASE+startbits+i,BIT_IS_SET(iobits,i));
+	    set_bitval(AUXI_RELAY_BASE+startbits+i,BIT_IS_SET(iobits,i));
 	}
 	return IO_OUTPUT_COUNT;
 }
@@ -352,8 +352,8 @@ unsigned int io_out_convert_bits(unsigned int startbits,unsigned char * iobits,u
 	unsigned int i;
 	for(i=0;i<bitcount;i++) {
 		if(BIT_IS_SET(iobits,i)) {
-			unsigned char bit = !get_bitval(IO_OUTPUT_BASE+startbits+i);
-			set_bitval(IO_OUTPUT_BASE+startbits+i,bit);
+			unsigned char bit = !get_bitval(AUXI_RELAY_BASE+startbits+i);
+			set_bitval(AUXI_RELAY_BASE+startbits+i,bit);
 		}
 	}
 	return IO_OUTPUT_COUNT;
@@ -365,7 +365,7 @@ unsigned int io_out_get_bits(unsigned int startbits,unsigned char * iobits,unsig
 	unsigned int i;
 	memset(iobits,0,BITS_TO_BS(bitcount));
 	for(i=0;i<bitcount;i++) {
-		unsigned char bit = get_bitval(IO_OUTPUT_BASE+startbits+i);
+		unsigned char bit = get_bitval(AUXI_RELAY_BASE+startbits+i);
 		SET_BIT(iobits,i,bit);
 	}
 	return IO_OUTPUT_COUNT;

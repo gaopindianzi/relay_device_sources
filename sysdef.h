@@ -55,9 +55,10 @@
 #define MAIN_RTC_TIME_PRI           100
 #define TCP_BIN_SERVER_PRI          101
 #define IO_EXTEND_THREAD_PRI        TCP_BIN_SERVER_PRI
-#define HTTP_REQUEST_PRI            102
+#define PLC_PRIORITY_LEVEL          102
 #define UDP_CLIENT_SERVER_PRI       103
-#define HTTP_SERVER_PRI             150
+#define HTTP_REQUEST_PRI            104
+#define HTTP_SERVER_PRI             105
 #define IO_AND_TIMING_SCAN_RPI      200  //不能太高，任务重
 
 
