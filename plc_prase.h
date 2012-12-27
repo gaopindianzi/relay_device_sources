@@ -3,9 +3,9 @@
 
 //--------------------------地址编号-------数量-----------
 #define  IO_INPUT_BASE          0
-#define  IO_INPUT_COUNT                     8
+#define  IO_INPUT_COUNT                     INPUT_CHANNEL_NUM
 #define  IO_OUTPUT_BASE         256  //0x01,0x00
-#define  IO_OUTPUT_COUNT                    8
+#define  IO_OUTPUT_COUNT                    OUTPUT_CHANNEL_NUM
 #define  AUXI_RELAY_BASE        512  //0x02,0x00
 #define  AUXI_RELAY_COUNT                   100
 #define  AUXI_HOLDRELAY_BASE    1024 //0x04,0x00
@@ -23,9 +23,9 @@
 #define  REG_BASE                0
 #define  REG_COUNT                          128
 //时间地址
-#define  REG_RTC_BASE            4096
+#define  REG_RTC_BASE            0x2000  //8192
 #define  REG_RTC_COUNT                      7    //年月日，时分秒，星期
-#define  REG_TEMP_BASE           4103
+#define  REG_TEMP_BASE           0x2007  //8199
 #define  REG_TEMP_COUNT                     2    //温度高地位
 
 //http://192.168.1.223/mpfsupload

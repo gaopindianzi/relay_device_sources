@@ -37,19 +37,27 @@
 //功能指令
 #define    PLC_ZRST    23
 #define    PLC_BCMP    24
-#define    PLC_BZCP    25
-#define    PLC_MOV     26
-#define    PLC_CML     27
-#define    PLC_BMOV    28
-#define    PLC_FMOV    29
+#define    PLC_BCMPE   25
+#define    PLC_BCMPL   26
+#define    PLC_BCMPB   27
+#define    PLC_BACMPL  28
+#define    PLC_BACMPE  29
+#define    PLC_BACMPB  30
+#define    PLC_BZCP    31
+#define    PLC_BZCPS   32
+#define    PLC_BAZCP   33
+#define    PLC_MOV     34
+#define    PLC_CML     35
+#define    PLC_BMOV    36
+#define    PLC_FMOV    37
 
-#define    PLC_NETRB   30
-#define    PLC_NETWB   31
-#define    PLC_NETRW   32
-#define    PLC_NETWW   33
+#define    PLC_NETRB   38
+#define    PLC_NETWB   39
+#define    PLC_NETRW   40
+#define    PLC_NETWW   41
 
-#define    PLC_LDKL    34
-#define    PLC_SEI     35 //有输入，即取反
+#define    PLC_LDKL    42
+#define    PLC_SEI     43 //有输入，即取反
 
 
 

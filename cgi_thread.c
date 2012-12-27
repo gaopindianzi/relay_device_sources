@@ -35,6 +35,7 @@
 #include "StringPrecess.h"
 #include "sysdef.h"
 #include "sys_var.h"
+#include "io_out.h"
 #include "bsp.h"
 
 #define THISINFO           0

@@ -48,7 +48,7 @@
 #include "io_time_ctl.h"
 #include <dev/relaycontrol.h>
 #include "sys_var.h"
-#include "io_out.h"
+#include "plc_io_inter.h"
 #include "debug.h"
 
 #include "plc_command_def.h"
@@ -196,14 +196,14 @@ void PlcInit(void)
 	bit_acc = 0;
 	memset(bit_stack,0,sizeof(bit_stack));
 	bit_stack_sp = 0;
-	io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
+	phy_io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
 	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
     memset(auxi_relays,0,sizeof(auxi_relays));
     memset(auxi_relays_last,0,sizeof(auxi_relays_last));
 	plc_command_index = 0;
 	memset(output_new,0,sizeof(output_new));
 	memset(output_last,0,sizeof(output_last));
-    io_out_get_bits(0,output_last,IO_OUTPUT_COUNT);
+    phy_io_out_get_bits(0,output_last,IO_OUTPUT_COUNT);
 	sys_time_tick_init();
 	time100ms_come_flag = 0;
 	time1s_come_flag = 0;
@@ -256,8 +256,27 @@ FF
 const unsigned char plc_test_flash[128] =
 {
 	0,
-	PLC_BZCP,20,40,    0x10,0x00,    0x01,0x00,
-	PLC_BCMP,30,       0x10,0x00,    0x01,0x05,
+//	PLC_BCMPE, 20, 0x20,0x01,    0x01,0x00,
+//	PLC_BCMPE, 10, 0x20,0x00,    0x01,0x01,
+	//PLC_BACMPL,  3,  10,20,3,    0x20,0x00,   0x01,0x04,
+	//PLC_BACMPE,  3,  10,20,4,    0x20,0x00,   0x01,0x05,
+	//PLC_BACMPB,  3,  10,20,5,   0x20,0x00,   0x01,0x06,
+	PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x01,0x04,
+	PLC_BAZCP, 3,  10,20,3,    20,20,3,   0x20,0x00,   0x02,0x00,
+	PLC_LD, 0x02,0x01,
+	PLC_ANI,0x08,0x00,
+	PLC_OUTT,0x08,0x00,0x00,5,
+
+	PLC_LDP, 0x08,0x00,
+	PLC_SEI, 0x01,0x00,
+
+	PLC_LD,  0x02,0x01,
+	PLC_ANDP,0x00,0x01,
+	PLC_SEI, 0x01,0x01,
+
+	PLC_LDF, 0x02,0x01,
+	PLC_RST, 0x01,0x01,
+
 	PLC_END
 };
 
@@ -906,21 +925,186 @@ void handle_plc_bcmp(void)
 	plc_command * plc = (plc_command *)plc_command_array;
 	unsigned char reg = get_byte_val(HSB_BYTES_TO_WORD(&plc->reg_hi));
 	unsigned int  out = HSB_BYTES_TO_WORD(&plc->out_hi);
-	if(reg < plc->kval) {
+	if(plc->cmd == PLC_BCMP) {  //三个寄存器的指令
+	    if(reg < plc->kval) {
+		    set_bitval(out,1);
+		    set_bitval(out+1,0);
+		    set_bitval(out+2,0);
+	    } else if(reg == plc->kval) {
+		    set_bitval(out,0);
+		    set_bitval(out+1,1);
+		    set_bitval(out+2,0);
+	    } else if(reg > plc->kval) {
+		    set_bitval(out,0);
+		    set_bitval(out+1,0);
+		    set_bitval(out+2,1);
+	    }
+	} else if(plc->cmd == PLC_BCMPL) {
+	    if(reg < plc->kval) {
+		    set_bitval(out,1);
+			bit_acc = 1;
+		} else {
+		    set_bitval(out,0);
+			bit_acc = 0;
+	    }
+	} else if(plc->cmd == PLC_BCMPB) {
+	    if(reg > plc->kval) {
+		    set_bitval(out,1);
+			bit_acc = 1;
+		} else {
+		    set_bitval(out,0);
+			bit_acc = 0;
+	    }
+	} else if(plc->cmd == PLC_BCMPE) {  //单个寄存器的指令
+	    if(reg == plc->kval) {
+		    set_bitval(out,1);
+			bit_acc = 1;
+		} else {
+		    set_bitval(out,0);
+			bit_acc = 0;
+	    }
+	}
+	plc_command_index += sizeof(plc_command);
+}
+
+/**********************************************
+ * 多字节比较指令
+ * 注意，是寄存器的值，跟常数比较，BACMPL是寄存器小于的意思，以此类推
+ * 左边即是常数，右边是寄存器
+ */
+void handle_plc_bacmp(void)
+{
+	typedef struct _plc_command
+	{
+		unsigned char cmd;
+		unsigned char size;
+		unsigned char k_base;  //后面还有很多k，总共有size个
+	} plc_command;
+	typedef struct _plc_bacmp_t
+	{
+		unsigned char b_base_hi;
+		unsigned char b_base_lo;
+		unsigned char out_hi;
+		unsigned char out_lo;
+	} plc_bacmp_t;
+	plc_command  * plc  = (plc_command *)plc_command_array;
+	plc_bacmp_t * pacmp = (plc_bacmp_t *)(plc_command_array+sizeof(plc_command) - 1 +plc->size);  //减去k_base占位一字节
+	unsigned char * pk  = &plc->k_base;
+	unsigned int base   = HSB_BYTES_TO_WORD(&pacmp->b_base_hi);
+	unsigned int out    = HSB_BYTES_TO_WORD(&pacmp->out_hi);
+	unsigned char result;
+	//从右边比起
+	if(plc->cmd == PLC_BACMPB) {
+		unsigned char i;
+		result = 0;
+	    for(i=plc->size;i>0;i--) {
+		    unsigned char k = pk[i-1];
+		    unsigned char reg = get_byte_val(base+i-1);
+			if(reg > k) {
+				result = 1;
+				break;
+			} else if(reg < k) {
+				break;
+			}
+	    }
+	} else if(plc->cmd == PLC_BACMPE) {
+		unsigned char i;
+		result = 1;
+	    for(i=plc->size;i>0;i--) {
+		    unsigned char lreg = pk[i-1];
+		    unsigned char rreg = get_byte_val(base+i-1);
+			if(lreg != rreg) { //发现假的条件，立刻退出
+				result = 0;
+				break;
+			}
+	    }
+	} else if(plc->cmd == PLC_BACMPL) {
+		unsigned char i;
+		result = 0;
+	    for(i=plc->size;i>0;i--) {
+		    unsigned char k = pk[i-1];
+		    unsigned char reg = get_byte_val(base+i-1);
+			if(reg < k) {
+				result = 1;
+				break;
+			} else if(reg > k) {
+				break;
+			}
+	    }
+	}
+	set_bitval(out,result);
+	bit_acc = result;
+	plc_command_index += sizeof(plc_command) + sizeof(plc_bacmp_t) + plc->size - 1; //减去k_base占位一字节
+}
+
+/**********************************************
+ * 多字节区间比较指令
+ * 注意，左边几个 ，右边几个，中间是寄存器
+ */
+void handle_plc_bazcp(void)
+{
+	typedef struct _plc_command
+	{
+		unsigned char cmd;
+		unsigned char size;
+		unsigned char k_base;  //后面还有很多k，总共有size个
+	} plc_command;
+	typedef struct _plc_bacmp_t
+	{
+		unsigned char b_base_hi;
+		unsigned char b_base_lo;
+		unsigned char out_hi;
+		unsigned char out_lo;
+	} plc_bacmp_t;
+	plc_command  * plc  = (plc_command *)plc_command_array;
+	plc_bacmp_t * pacmp = (plc_bacmp_t *)(plc_command_array+sizeof(plc_command) - 1 + plc->size * 2);  //减去k_base占位一字节
+	unsigned char * pkl  = &plc->k_base;
+	unsigned char * pkr  = pkl + plc->size;
+	unsigned int base   = HSB_BYTES_TO_WORD(&pacmp->b_base_hi);
+	unsigned int out    = HSB_BYTES_TO_WORD(&pacmp->out_hi);
+	unsigned char result;
+	//先比较左边小于条件
+	unsigned char i;
+	result = 0; //假设在左边
+	for(i=plc->size;i>0;i--) {
+	    unsigned char k = pkl[i-1];
+	    unsigned char reg = get_byte_val(base+i-1);
+		if(reg < k) {
+			break;
+		} else if(reg > k) { //判断结果在右边
+			result = 1;
+			break;
+		}
+	}
+	if(result == 1) { //左边成立的
+	    for(i=plc->size;i>0;i--) {
+		    unsigned char k = pkr[i-1];
+		    unsigned char reg = get_byte_val(base+i-1);
+			if(reg > k) {  //判断结果在最右边
+				result = 2;
+				break;
+			} else if(reg < k) {
+				break;
+			}
+	    }
+	}
+	if(result == 0) {
 		set_bitval(out,1);
 		set_bitval(out+1,0);
 		set_bitval(out+2,0);
-	} else if(reg == plc->kval) {
+	} else if(result == 1) {
 		set_bitval(out,0);
 		set_bitval(out+1,1);
 		set_bitval(out+2,0);
-	} else if(reg > plc->kval) {
+	} else if(result == 2) {
 		set_bitval(out,0);
 		set_bitval(out+1,0);
 		set_bitval(out+2,1);
 	}
-	plc_command_index += sizeof(plc_command);
+	plc_command_index += sizeof(plc_command) + sizeof(plc_bacmp_t) + plc->size*2 - 1; //减去k_base占位一字节
 }
+
+
 /**********************************************
  * 字节区间比较指令
  * BZCP   K1  K2  B  M0
@@ -941,18 +1125,28 @@ void handle_plc_bzcp(void)
 	plc_command * plc = (plc_command *)plc_command_array;
 	unsigned char reg = get_byte_val(HSB_BYTES_TO_WORD(&plc->reg_hi));
 	unsigned int  out = HSB_BYTES_TO_WORD(&plc->out_hi);
-	if(reg < plc->klow) {
-		set_bitval(out,1);
-		set_bitval(out+1,0);
-		set_bitval(out+2,0);
-	} else if(reg >= plc->klow && reg <= plc->khig) {
-		set_bitval(out,0);
-		set_bitval(out+1,1);
-		set_bitval(out+2,0);
-	} else if(reg > plc->khig) {
-		set_bitval(out,0);
-		set_bitval(out+1,0);
-		set_bitval(out+2,1);
+	if(plc->cmd == PLC_BZCP) {
+	    if(reg < plc->klow) {
+		    set_bitval(out,1);
+		    set_bitval(out+1,0);
+		    set_bitval(out+2,0);
+	    } else if(reg >= plc->klow && reg <= plc->khig) {
+		    set_bitval(out,0);
+		    set_bitval(out+1,1);
+		    set_bitval(out+2,0);
+	    } else if(reg > plc->khig) {
+		    set_bitval(out,0);
+		    set_bitval(out+1,0);
+		    set_bitval(out+2,1);
+	    }
+	} else if(plc->cmd == PLC_BZCPS) {
+		if(reg >= plc->klow && reg <= plc->khig) {
+			set_bitval(out,1);
+			bit_acc = 1;
+		} else {
+			set_bitval(out,0);
+			bit_acc = 0;
+		}
 	}
 	plc_command_index += sizeof(plc_command);
 }
@@ -1079,7 +1273,7 @@ void handle_plc_net_wb(void)
 void PlcProcess(void)
 {
 	//输入处理,读取IO口的输入
-	io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
+	phy_io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
 	//处理通信程序
 	//初始化通信令牌
     net_communication_count = 0; ////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!plc_test_buffer[0]; //打个比喻，代码里面存在5处发送
@@ -1156,10 +1350,22 @@ void PlcProcess(void)
         handle_plc_net_rb(); 
         break;
 	case PLC_BCMP:
+	case PLC_BCMPE:
+	case PLC_BCMPL:
+	case PLC_BCMPB:
 		handle_plc_bcmp();
 		break;
+	case PLC_BACMPL:
+	case PLC_BACMPE:
+	case PLC_BACMPB:
+		handle_plc_bacmp();
+		break;
 	case PLC_BZCP:
+	case PLC_BZCPS:
 		handle_plc_bzcp();
+		break;
+	case PLC_BAZCP:
+		handle_plc_bazcp();
 		break;
     case PLC_NETWB:
     case PLC_NETRW:
@@ -1177,7 +1383,7 @@ void PlcProcess(void)
 	goto next_plc_command;
  plc_command_finished:
 	//输出处理，把运算结果输出到继电器中
-	io_out_set_bits(0,output_new,IO_OUTPUT_COUNT);
+	phy_io_out_set_bits(0,output_new,IO_OUTPUT_COUNT);
 	memcpy(output_last,output_new,sizeof(output_new));
 	//后续处理
 	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
@@ -1222,7 +1428,7 @@ THREAD(plc_thread, arg)
     while(1)
 	{
 		PlcProcess();
-		//NutSleep(1);
+		NutSleep(1);
 	}
 }
 

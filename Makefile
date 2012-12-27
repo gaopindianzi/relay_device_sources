@@ -123,7 +123,7 @@ endif
 PROJ = $(HEX_FILE)
 WEBFILE = urom.c
 
-SRCS = plc_prase.c main.c io_out.c bin_cmd_server.c bsp.c  time_handle.c udp_client_command.c app_check_pro.c regtable.c
+SRCS = plc_io_inter.c plc_prase.c main.c io_out.c bin_cmd_server.c bsp.c  time_handle.c udp_client_command.c app_check_pro.c regtable.c
 
 
 #485两个条件必须满足才编译
