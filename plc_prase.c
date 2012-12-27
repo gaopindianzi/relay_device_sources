@@ -103,8 +103,8 @@ COUNTER_ARRAYS_T counter_arrys;
 unsigned char inputs_new[BITS_TO_BS(IO_INPUT_COUNT)];
 unsigned char inputs_last[BITS_TO_BS(IO_INPUT_COUNT)];
 //输出继电器
-unsigned char output_last[BITS_TO_BS(IO_OUTPUT_COUNT)];
-unsigned char output_new[BITS_TO_BS(IO_OUTPUT_COUNT)];
+unsigned char output_last[BITS_TO_BS(IO_OUTPUT_COUNT)]  __attribute__ ((section (".noinit")));
+unsigned char output_new[BITS_TO_BS(IO_OUTPUT_COUNT)]   __attribute__ ((section (".noinit")));
 //辅助继电器
 unsigned char auxi_relays[BITS_TO_BS(AUXI_RELAY_COUNT)];
 unsigned char auxi_relays_last[BITS_TO_BS(AUXI_RELAY_COUNT)];
@@ -200,9 +200,11 @@ void plc_timing_tick_process(void)
 
 void PlcInit(void)
 {
-	bit_acc = 0;
-	memset(bit_stack,0,sizeof(bit_stack));
-	bit_stack_sp = 0;
+	if(get_reset_type() != WDT_RESET) { //不是看门狗复位，都必须初始化
+	    memset(output_new,0,sizeof(output_new));
+	    memset(output_last,0,sizeof(output_last));
+	}
+    phy_io_out_get_bits(0,output_last,IO_OUTPUT_COUNT);
 	phy_io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
 	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
     memset(auxi_relays,0,sizeof(auxi_relays));
@@ -217,11 +219,6 @@ void PlcInit(void)
 	holder_register_read(0,hold_register_map,sizeof(hold_register_map));
 	memcpy(hold_register_map_last,hold_register_map,sizeof(hold_register_map));
 	//
-	plc_command_index = 0;
-	memset(output_new,0,sizeof(output_new));
-	memset(output_last,0,sizeof(output_last));
-    phy_io_out_get_bits(0,output_last,IO_OUTPUT_COUNT);
-	sys_time_tick_init();
 	time100ms_come_flag = 0;
 	time1s_come_flag = 0;
 	memset(&tim100ms_arrys,0,sizeof(tim100ms_arrys));
@@ -230,6 +227,10 @@ void PlcInit(void)
 	memset(general_reg,0,sizeof(general_reg));
 	sys_time_tick_init();
 	plc_rtc_tick_process();
+	bit_acc = 0;
+	memset(bit_stack,0,sizeof(bit_stack));
+	bit_stack_sp = 0;
+	plc_command_index = 0;
 }
 
 

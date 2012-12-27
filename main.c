@@ -128,14 +128,14 @@ extern void StartModbus_Interface(void);
 uint32_t  ipconfig_dns;
 extern char gpassword[32];
 
+uint8_t  reset_type;
+
 int main(void)
 {
-    u_char de_mac[] = SYS_DEFAULT_MAC;
-	
+    u_char de_mac[] = SYS_DEFAULT_MAC;	
     u_long baud = 115200;
 	uint16_t count = 0;
 	uint8_t  config;
-	uint8_t  reset_type;
 	u_long   millis;
 	u_long   wait;
 	int      direction;

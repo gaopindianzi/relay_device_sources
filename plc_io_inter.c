@@ -47,6 +47,7 @@
 #include "bsp.h"
 #include "time_handle.h"
 #include "io_time_ctl.h"
+#include <dev/reset_avr.h>
 #include <dev/relaycontrol.h>
 #include "sys_var.h"
 #include "io_out.h"
@@ -183,5 +184,27 @@ void holder_register_read(unsigned int start,unsigned char * buffer,unsigned int
 void holder_register_write(unsigned int start,unsigned char * buffer,unsigned int len)
 {
 	DS1307RamWrite(0x08+start,buffer,len);
+}
+
+
+#define  POWERUP_RESET       0x00
+#define  WDT_RESET           0x01
+#define  EXT_RESET           0x02
+#define  SOFT_RESET          0x03
+
+
+
+
+extern uint8_t  reset_type;  //单片机内部的数据
+
+unsigned char get_reset_type(void)
+{
+	if(reset_type&AVR_EXT_RESET) {
+		return EXT_RESET;
+	} else if(reset_type&AVR_WDT_RESET) {
+		return WDT_RESET;
+	} else if(reset_type&AVR_POWER_UP_RESET) {
+		return POWERUP_RESET;
+	}
 }
 
