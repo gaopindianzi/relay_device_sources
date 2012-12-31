@@ -359,6 +359,7 @@ int main(void)
 	    }
 	}
 
+	StartPlcThread();
 
 	//移到这里是否有问题？未测试
 	BspManualCtlModeInit();
@@ -386,11 +387,6 @@ int main(void)
 	
 	NutNetLoadConfig(DEV_ETHER_NAME);
 	
-
-
-
-
-
 
 	//config = 0x3;
 
@@ -517,7 +513,7 @@ config_finish:
 	StartHttpRequestThread();
 #endif
 
-	StartPlcThread();
+	
 
 	while(0) {
 		NutSleep(1000);
@@ -594,7 +590,7 @@ config_finish:
 			_ioctl(_fileno(sys_varient.resetfile), SET_RESET, NULL);
 		}
 #endif
-		plc_timing_tick_process();
+		//plc_timing_tick_process();
 	}
     return 0;
 }

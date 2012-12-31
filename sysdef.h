@@ -52,6 +52,7 @@
 
 
 
+#define RT_THREAD_PRI               1
 #define MAIN_RTC_TIME_PRI           100
 #define TCP_BIN_SERVER_PRI          101
 #define IO_EXTEND_THREAD_PRI        TCP_BIN_SERVER_PRI

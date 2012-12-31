@@ -27,8 +27,8 @@ void TimingEepromToNode(timing_node * pio,timing_node_eeprom * pe);
 void TimingNodeToEeprom(timing_node * pio,timing_node_eeprom * pe);
 int timing_load_form_eeprom(void);
 
-void SetTimingOnMsk(uint32_t timing_on_msk,uint32_t timing_off_msk);
-void GetTimingOnMsk(uint32_t * timing_on_msk,uint32_t * timing_off_msk);
+//void SetTimingOnMsk(uint32_t timing_on_msk,uint32_t timing_off_msk);
+//void GetTimingOnMsk(uint32_t * timing_on_msk,uint32_t * timing_off_msk);
 
 
 

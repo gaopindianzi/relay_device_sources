@@ -323,36 +323,15 @@ const uint32_t second_of_week_array[7] = {
     518400UL
 };
 
-uint32_t io_timing_on_msk = 0xFFFFFFFFUL;
-
-void SetTimingOnMsk(uint32_t timing_on_msk,uint32_t timing_off_msk)
-{
-	io_timing_on_msk |=  timing_on_msk;
-	io_timing_on_msk &= ~timing_off_msk;
-}
-void GetTimingOnMsk(uint32_t * timing_on_msk,uint32_t * timing_off_msk)
-{
-	*timing_on_msk  =  io_timing_on_msk;
-	*timing_off_msk = ~io_timing_on_msk;
-}
-
-extern const uint32_t code_msk[32];
-
 int timing_ctl_io_node(const timing_node * node,int on)
 {
 	unsigned char reg0x1 = 0x1;
 	unsigned char reg0x0 = 0x0;
 	if(node->addr[1] == 0) {
-		if(node->addr[0] < 32) {
-			if(code_msk[node->addr[0]]&io_timing_on_msk) {
-		        if(on) {
-					io_out_set_bits(node->addr[0],&reg0x1,1);
-			        //SetRelayOneBitWithDelay(node->addr[0]);
-		        } else {
-			        //ClrRelayOneBitWithDelay(node->addr[0]);
-					io_out_set_bits(node->addr[0],&reg0x0,1);
-		        }
-			}
+		if(on) {
+			io_out_set_bits(node->addr[0],&reg0x1,1);
+		} else {
+			io_out_set_bits(node->addr[0],&reg0x0,1);
 		}
 	} else {
 		if(THISINFO)printf("timing_ctl_io_node,addr[1] != 0 ERROR!\r\n");

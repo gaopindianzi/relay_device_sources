@@ -147,6 +147,8 @@ unsigned int  net_global_send_index = 0; //发送令牌，指示下一个个发送的令牌
 //内部用系统计数器
 static uint32_t last_tick;
 static uint32_t last_tick1s;
+unsigned char secend_tick_come = 0;
+unsigned char last_tm_sec;
 
 void sys_time_tick_init(void)
 {
@@ -174,20 +176,21 @@ void plc_rtc_tick_process(void)
 void plc_timing_tick_process(void)
 {
 	uint32_t curr = NutGetMillis();
-	if((curr - last_tick) >= 100) {  //100ms
+	if((curr - last_tick) >= 100) {  //100ms //时间快了点，稍微增大计数器，反之减小计数
+		//100ms
 		sys_lock();
 		time100ms_come_flag++;
-		sys_unlock();
-		last_tick = curr;
-		//if(THIS_INFO)putrsUART((ROM char*)"time tick 100ms");
+		//1 sec
+		if(last_tm_sec != rtc_reg[0]) {
+	        last_tm_sec = rtc_reg[0];
+		    time1s_come_flag++;
+	    }
+		last_tick += 100;
+	    sys_unlock();
 	}
 	if((curr - last_tick1s) >= 1000) {
-		sys_lock();
-		time1s_come_flag++;
-		sys_unlock();
-		last_tick1s = curr;
-		plc_rtc_tick_process();
-		//if(THIS_INFO)putrsUART((ROM char*)"time tick 1s");
+		last_tick1s += 1000;
+		secend_tick_come = 1;
 	}
 }
 
@@ -271,15 +274,131 @@ FF
 */
 
 
-const unsigned char plc_test_flash[256] =
+const unsigned char plc_test_flash[1024] =
 {
 	0,
-	PLC_LDI, 0x08,0x00,
-	PLC_OUTT,0x08,0x00,0x00,10,
+#if 1  //客户指定1小时关的
+	PLC_LDP, 0x00,0x00,
+	PLC_SET, 0x02,50,
+	PLC_SET, 0x02,0x00,
+	PLC_LDF, 0x00,0x00,
+	PLC_RST, 0x02,50,
+	PLC_RST, 0x02,0x00,
 
-	PLC_LDP, 0x08,0x00,
-	PLC_SEI, 0x01,0x00,
+	PLC_LDP, 0x00,0x01,
+	PLC_SET, 0x02,51,
+	PLC_SET, 0x02,0x01,
+	PLC_LDF, 0x00,0x01,
+	PLC_RST, 0x02,51,
+	PLC_RST, 0x02,0x01,
 
+	PLC_LDP, 0x00,0x02,
+	PLC_SET, 0x02,52,
+	PLC_SET, 0x02,0x02,
+	PLC_LDF, 0x00,0x02,
+	PLC_RST, 0x02,52,
+	PLC_RST, 0x02,0x02,
+
+	PLC_LDP, 0x00,0x03,
+	PLC_SET, 0x02,53,
+	PLC_SET, 0x02,0x03,
+	PLC_LDF, 0x00,0x03,
+	PLC_RST, 0x02,53,
+	PLC_RST, 0x02,0x03,
+
+	PLC_LDP, 0x00,0x04,
+	PLC_SET, 0x02,54,
+	PLC_SET, 0x02,0x04,
+	PLC_LDF, 0x00,0x04,
+	PLC_RST, 0x02,54,
+	PLC_RST, 0x02,0x04,
+
+	PLC_LDP, 0x00,0x05,
+	PLC_SET, 0x02,55,
+	PLC_SET, 0x02,0x05,
+	PLC_LDF, 0x00,0x05,
+	PLC_RST, 0x02,55,
+	PLC_RST, 0x02,0x05,
+
+	PLC_LDP, 0x00,0x06,
+	PLC_SET, 0x02,56,
+	PLC_SET, 0x02,0x06,
+	PLC_LDF, 0x00,0x06,
+	PLC_RST, 0x02,56,
+	PLC_RST, 0x02,0x06,
+
+	PLC_LDP, 0x00,0x07,
+	PLC_SET, 0x02,57,
+	PLC_SET, 0x02,0x07,
+	PLC_LDF, 0x00,0x07,
+	PLC_RST, 0x02,57,
+	PLC_RST, 0x02,0x07,
+
+	PLC_LDP, 0x00,0x08,
+	PLC_SET, 0x02,58,
+	PLC_SET, 0x02,0x08,
+	PLC_LDF, 0x00,0x08,
+	PLC_RST, 0x02,58,
+	PLC_RST, 0x02,0x08,
+
+	PLC_LD,  0x02,50,
+	PLC_OUTT,0x0C,0x00,1,0x2C,
+	PLC_LD,  0x02,51,
+	PLC_OUTT,0x0C,0x01,2,0x58,
+	PLC_LD,  0x02,52,
+	PLC_OUTT,0x0C,0x02,3,0x84,  //最后两位是时间，0，表示高位，50表示低位，可以用十六进制表示，单位毫秒,比如36000毫秒表示0x8CA0，则可以修改为8C A0
+	PLC_LD,  0x02,53,
+	PLC_OUTT,0x0C,0x03,3,0x84,
+	PLC_LD,  0x02,54,
+	PLC_OUTT,0x0C,0x04,4,0xB0,
+	PLC_LD,  0x02,55,
+	PLC_OUTT,0x0C,0x05,5,0xDC,
+	PLC_LD,  0x02,56,
+	PLC_OUTT,0x0C,0x06,7,0x08,
+	PLC_LD,  0x02,57,
+	PLC_OUTT,0x0C,0x07,8,0x34,
+
+	PLC_LDP, 0x0C,0x00,
+	PLC_RST, 0x02,0x00,
+
+	PLC_LDP, 0x0C,0x01,
+	PLC_RST, 0x02,0x01,
+
+	PLC_LDP, 0x0C,0x02,
+	PLC_RST, 0x02,0x02,
+
+	PLC_LDP, 0x0C,0x03,
+	PLC_RST, 0x02,0x03,
+
+	PLC_LDP, 0x0C,0x04,
+	PLC_RST, 0x02,0x04,
+
+	PLC_LDP, 0x0C,0x05,
+	PLC_RST, 0x02,0x05,
+
+	PLC_LDP, 0x0C,0x06,
+	PLC_RST, 0x02,0x06,
+
+	PLC_LDP, 0x0C,0x07,
+	PLC_RST, 0x02,0x07,
+
+	PLC_LD,  0x02,0x00,
+	PLC_OUT, 0x01,0x00,
+	PLC_LD,  0x02,0x01,
+	PLC_OUT, 0x01,0x01,
+	PLC_LD,  0x02,0x02,
+	PLC_OUT, 0x01,0x02,
+	PLC_LD,  0x02,0x03,
+	PLC_OUT, 0x01,0x03,
+	PLC_LD,  0x02,0x04,
+	PLC_OUT, 0x01,0x04,
+	PLC_LD,  0x02,0x05,
+	PLC_OUT, 0x01,0x05,
+	PLC_LD,  0x02,0x06,
+	PLC_OUT, 0x01,0x06,
+	PLC_LD,  0x02,0x07,
+	PLC_OUT, 0x01,0x07,
+#endif
 
 #if 0 //16路上电保持
 	PLC_LDI, 0x06,0x00,
@@ -601,7 +720,7 @@ void timing_cell_prcess(void)
 	sys_unlock();
     {
 	    TIM100MS_ARRAYS_T * ptiming = &tim100ms_arrys;
-	    for(i=0;i<GET_ARRRYS_NUM(tim100ms_arrys.counter);i++) {
+	    for(i=0;i<TIMING100MS_EVENT_COUNT;i++) {
 		    if(BIT_IS_SET(ptiming->enable_bits,i)) { //如果允许计时
 			    if(counter > 0 && !BIT_IS_SET(ptiming->event_bits,i)) {  //如果时间事件未发生
 				    if(ptiming->counter[i] > counter) {
@@ -632,7 +751,7 @@ void timing_cell_prcess(void)
 	sys_unlock();
 	{
 	    TIM1S_ARRAYS_T * ptiming = &tim1s_arrys;
-	    for(i=0;i<GET_ARRRYS_NUM(tim1s_arrys.counter);i++) {
+	    for(i=0;i<TIMING1S_EVENT_COUNT;i++) {
 		    if(BIT_IS_SET(ptiming->enable_bits,i)) { //如果允许计时
 			    if(counter > 0 && !BIT_IS_SET(ptiming->event_bits,i)) {  //如果时间事件未发生
 				    if(ptiming->counter[i] > counter) {
@@ -949,7 +1068,7 @@ void handle_plc_out_c(void)
 	//计数器内部维持上一次的触发电平
 	//触发计数器的时候，把这次的触发电平触发进计数器
 	if(bit_acc) {
-	    if(index < GET_ARRRYS_NUM(counter_arrys.counter)) {
+	    if(index < COUNTER_EVENT_COUNT) {
 	        if(!BIT_IS_SET(counter_arrys.last_trig_bits,index)) {
 		        //上一次是低电平，这次是高电平，可以触发计数
 			    if(counter_arrys.counter[index] < kval) {
@@ -961,7 +1080,7 @@ void handle_plc_out_c(void)
 		}
 	}
 	//把电平记录到计数器去
-	if(index < GET_ARRRYS_NUM(counter_arrys.counter)) {
+	if(index < COUNTER_EVENT_COUNT) {
 	    SET_BIT(counter_arrys.last_trig_bits,index,bit_acc);
 	}
 	plc_command_index += 5;
@@ -1534,6 +1653,15 @@ void PlcProcess(void)
 
 
 
+THREAD(plc_rtthread, arg)
+{
+	NutThreadSetPriority(RT_THREAD_PRI);
+    while(1)
+	{
+		NutSleep(90);
+		plc_timing_tick_process();
+	}
+}
 
 THREAD(plc_thread, arg)
 {
@@ -1544,10 +1672,15 @@ THREAD(plc_thread, arg)
 	{
 		PlcProcess();
 		NutSleep(50);
+		if(secend_tick_come) {
+			secend_tick_come = 0;
+		    plc_rtc_tick_process();
+		}
 	}
 }
 
 void StartPlcThread(void)
 {
 	NutThreadCreate("plc_thread",  plc_thread, 0, 1024);
+	NutThreadCreate("plc_rtthread",  plc_rtthread, 0, 64);
 }

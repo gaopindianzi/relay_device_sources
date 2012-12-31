@@ -14,10 +14,10 @@
 #define  SPECIAL_RELAY_BASE     1536 //0x06,0x00
 #define  SPECIAL_RELAY_COUNT                1   //只有一位，复位标记继电器
 //
-#define  TIMING100MS_EVENT_BASE  2048  //0x08,0x00
+#define  TIMING100MS_EVENT_BASE  0x0800  //0x08,0x00
 #define  TIMING100MS_EVENT_COUNT            24
 
-#define  TIMING1S_EVENT_BASE     3072  //0x0C,0x00
+#define  TIMING1S_EVENT_BASE     0x0C00  //0x0C,0x00
 #define  TIMING1S_EVENT_COUNT               24
 
 #define  COUNTER_EVENT_BASE      4096  //0x10,0x00

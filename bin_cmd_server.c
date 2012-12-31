@@ -983,7 +983,7 @@ int CmdGetInputValidMsk(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 }
 #endif
 
-#ifdef APP_TIMEIMG_ON
+#if 0
 //--------------------------------------------------------------------------------------------
 //
 //
@@ -1337,7 +1337,7 @@ const CmdMapToCmdCallType CmdCallMap[] =
 	{CMD_GET_RTC_VALUE,CmdGetRtcValue},
 	//{CMD_SET_INPUT_CTL_ON_MSK,CmdSetInputValidMsk},
 	//{CMD_GET_INPUT_CTL_ON_MSK,CmdGetInputValidMsk},
-#ifdef APP_TIMEIMG_ON
+#if 0
 	{CMD_SET_TIMING_ON_MSK,CmdSetTimingValidMsk},
 	{CMD_GET_TIMING_ON_MSK,CmdGetTimingValidMsk},
 #endif

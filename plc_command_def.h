@@ -14,13 +14,13 @@
 #define    PLC_LD      1     //加载指令
 #define    PLC_LDKH    2
 #define    PLC_LDI     3
-#define    PLC_OUT     4     //输出指令
-#define    PLC_AND     5
+#define    PLC_OUT     4    //04  //输出指令
+#define    PLC_AND     5   //05
 #define    PLC_ANI     6
 #define    PLC_OR      7
 #define    PLC_ORI     8
-#define    PLC_LDP     9
-#define    PLC_LDF     10
+#define    PLC_LDP     9    //09
+#define    PLC_LDF     10   //0A
 #define    PLC_ANDP    11
 #define    PLC_ANDF    12
 #define    PLC_ORP     13
@@ -28,11 +28,11 @@
 #define    PLC_MPS     15
 #define    PLC_MRD     16
 #define    PLC_MPP     17
-#define    PLC_SET     18
-#define    PLC_RST     19
+#define    PLC_SET     18   //12
+#define    PLC_RST     19   //13
 #define    PLC_INV     20
 //自定义指令
-#define    PLC_OUTT    21   //输出到定时器
+#define    PLC_OUTT    21   //15 输出到定时器
 #define    PLC_OUTC    22   //输出都计数器
 //功能指令
 #define    PLC_ZRST    23
@@ -57,7 +57,7 @@
 #define    PLC_NETWW   41
 
 #define    PLC_LDKL    42
-#define    PLC_SEI     43 //有输入，即取反 //2B
+#define    PLC_SEI     43 //2B  有输入，即取反 //2B
 
 #define    PLC_JMP     44  //无条件跳转
 #define    PLC_JMPS    45  //条件真跳转

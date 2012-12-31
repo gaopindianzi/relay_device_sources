@@ -647,7 +647,7 @@ void io_out_ctl_thread_server(void)
 	uint8_t  led = 0;
 
 
-	NutSleep(5);
+	NutSleep(1000);
 
 #ifdef APP_TIMEIMG_ON
 	timing_init();
