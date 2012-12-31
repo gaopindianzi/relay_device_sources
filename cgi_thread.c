@@ -356,7 +356,8 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 				//SetRelayWithDelay(out);
 				buf[0] = out & 0xFF;
 				buf[1] = out >> 8;
-				_ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, buf);
+				//_ioctl(_fileno(sys_varient.iofile), IO_OUT_SET, buf);
+				io_out_set_bits(0,buf,16);
 				break;
 			}
 			if(strcmp(name,"setiomsk") == 0) {
@@ -375,9 +376,11 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 				//_ioctl(_fileno(iofile), IO_OUT_GET, buf);
 				//out |= GetIoOut();
 				//SetRelayWithDelay(out);
+				io_out_get_bits(0,buf,16);
 				buf[0] |= out & 0xFF;
 				buf[1] |= out >> 8;
-				_ioctl(_fileno(sys_varient.iofile), IO_SET_BITMAP, buf);
+				//_ioctl(_fileno(sys_varient.iofile), IO_SET_BITMAP, buf);
+				io_out_set_bits(0,buf,16);
 				break;
 			}
 			if(strcmp(name,"clriomsk") == 0) {
@@ -393,12 +396,10 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 						out |= 0x01;
 					}
 				}
-				//i = GetIoOut();
-				//i &= ~out;
-				//SetRelayWithDelay(i);
-				buf[0] |= out & 0xFF;
-				buf[1] |= out >> 8;
-				_ioctl(_fileno(sys_varient.iofile), IO_CLR_BITMAP, buf);
+				io_out_get_bits(0,buf,16);
+				buf[0] &= ~(out & 0xFF);
+				buf[1] |=  (out >> 8);
+				io_out_set_bits(0,buf,16);
 				break;
 			}
 			if(strcmp(name,"queryallout") == 0) {
@@ -406,7 +407,7 @@ int web_relay_io_ctl(FILE * stream, REQUEST * req)
 				unsigned char buf[2];
 				char out[17] = {0,0,0,0,0,0,0,0};
 				uint16_t io;
-				_ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, buf);
+				io_out_get_bits(0,buf,16);
 				io = buf[1];
 				io <<= 8;
 				io |= buf[0];
