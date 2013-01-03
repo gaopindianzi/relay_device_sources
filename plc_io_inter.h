@@ -9,7 +9,7 @@ extern unsigned int phy_io_out_set_bits(unsigned int startbits,unsigned char * i
 extern void holder_register_read(unsigned int start,unsigned char * buffer,unsigned int len);
 extern void holder_register_write(unsigned int start,unsigned char * buffer,unsigned int len);
 extern unsigned int load_plc_form_eeprom(unsigned int start,unsigned char * buffer,unsigned int len);
-extern unsigned int write_plc_to_eeprom(unsigned int start,unsigned char * buffer,unsigned int len);
+extern unsigned int write_plc_to_eeprom(unsigned int start,const unsigned char * buffer,unsigned int len);
 
 /*****************************
  *   提供标准的接口

@@ -201,17 +201,30 @@ void plc_timing_tick_process(void)
  * 系统初始化
  */
 
+void memsetbit(unsigned char * des,unsigned char * src,unsigned int bitcount)
+{
+	unsigned int i;
+	for(i=0;i<bitcount;i++) {
+		SET_BIT(des,i,BIT_IS_SET(src,i));
+	}
+}
+
 void PlcInit(void)
 {
+	phy_io_out_get_bits(0,output_new,IO_OUTPUT_COUNT);
+	phy_io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
+	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
+
 	if(get_reset_type() != WDT_RESET) { //不是看门狗复位，都必须初始化
 	    memset(output_new,0,sizeof(output_new));
 	    memset(output_last,0,sizeof(output_last));
+		memset(auxi_relays,0,sizeof(auxi_relays));
+		memset(auxi_relays_last,0,sizeof(auxi_relays_last));
+	} else {
+	    memcpy(output_last,output_new,sizeof(output_new));
+		memsetbit(auxi_relays,output_new,IO_OUTPUT_COUNT);
+		memcpy(auxi_relays_last,auxi_relays,sizeof(auxi_relays_last));
 	}
-    phy_io_out_get_bits(0,output_last,IO_OUTPUT_COUNT);
-	phy_io_in_get_bits(0,inputs_new,IO_INPUT_COUNT);
-	memcpy(inputs_last,inputs_new,sizeof(inputs_new));
-    memset(auxi_relays,0,sizeof(auxi_relays));
-    memset(auxi_relays_last,0,sizeof(auxi_relays_last));
 
 	memset(speicial_relays,0,sizeof(speicial_relays));
 	memset(speicial_relays_last,0,sizeof(speicial_relays_last));

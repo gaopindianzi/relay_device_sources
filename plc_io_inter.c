@@ -207,6 +207,7 @@ unsigned char get_reset_type(void)
 	} else if(reset_type&AVR_POWER_UP_RESET) {
 		return POWERUP_RESET;
 	}
+	return 0;
 }
 
 
@@ -226,7 +227,7 @@ unsigned int load_plc_form_eeprom(unsigned int start,unsigned char * buffer,unsi
 	return len;
 }
 
-unsigned int write_plc_to_eeprom(unsigned int start,unsigned char * buffer,unsigned int len)
+unsigned int write_plc_to_eeprom(unsigned int start,const unsigned char * buffer,unsigned int len)
 {
 	if(len == 0) {
 		return 0;

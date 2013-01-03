@@ -48,6 +48,8 @@
 #include "io_time_ctl.h"
 #include "bsp.h"
 #include "sys_var.h"
+#include "plc_prase.h"
+#include "compiler.h"
 
 #include "debug.h"
 
@@ -58,127 +60,48 @@
 
 extern void dumpdata(void * _buffer,int len);
 
-extern unsigned char io_out[32/8];
-extern const uint32_t code_msk[32];
-
 int  ReadCoilStatus(modbus_type_fc1_cmd * pmodbus)
 {
-	uint8_t io_out_buffer[4];
-	uint16_t count;
-	uint32_t tmp;
-	uint16_t num;
-	int rc;
+	uint16_t startbits,count,i;
 
-
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
-	num = tmp;
-	rc = _ioctl(_fileno(sys_varient.iofile), IO_OUT_GET, io_out_buffer);
-
-	//if(THISINFO)dumpdata(pmodbus,sizeof(modbus_type_fc1_cmd));
-	count = pmodbus->bit_count_h;
-	count <<= 8; 
-	count |= pmodbus->bit_count_l;
-	DEBUGMSG(THISINFO,("read bit counts(0x%X,0x%X->0x%X)\r\n",pmodbus->bit_count_h,pmodbus->bit_count_l,count));
-	
 	modbus_type_fc1_ack * pack = (modbus_type_fc1_ack *)pmodbus;
-	if(count) {
-		unsigned char B,b;
-		unsigned int i;
-		tmp = pmodbus->ref_number_h; tmp <<=8; tmp |= pmodbus->ref_number_l;
-		B = tmp / 8; b = tmp % 8;
-		
-		DEBUGMSG(THISINFO,("read bit counts(%d)\r\n",count));
-		for(i=0;i<count;i++) {
-			if(B < BITS_TO_BS(num)) {
-				if(io_out_buffer[B]&(1<<b)) {
-				    pack->bit_valus[i/8] |=  (1<<(i%8));
-				} else {
-					pack->bit_valus[i/8] &= ~(1<<(i%8));
-				}
-			} else {
-				pack->bit_valus[i/8] &= ~(1<<(i%8));
-			}
-			if(++b >= 8) {
-				b = 0;
-				++B;
-			}
-		}
-		pack->byte_count = BITS_TO_BS(count);
-		//DEBUGMSG(THISINFO,("Read bit ok,return %d bytes\r\n",pack->byte_count));
-		return 3 + pack->byte_count;  //加上头部的数据长度
-	} else {
-		DEBUGMSG(THISERROR,("pmodbus->bit_count == 0 error\r\n"));
-		pack->byte_count = 0;
-		return 3;
+
+	count = HSB_BYTES_TO_WORD(&pmodbus->bit_count_h),
+	startbits  = HSB_BYTES_TO_WORD(&pmodbus->ref_number_h),
+
+	memset(&pack->bit_valus[0],0,BITS_TO_BS(count));
+	for(i=0;i<count;i++) {
+		unsigned char bit = get_bitval(startbits+i);
+		SET_BIT(&pack->bit_valus[0],i,bit);
 	}
-	return 0;
+
+	pack->byte_count = BITS_TO_BS(count);	
+	return 3 + pack->byte_count;  //加上头部的数据长度
 }
 
 int  ReadInputDiscretes(modbus_type_fc1_cmd * pmodbus)
 {
-	uint8_t io_out_buffer[4];
-	uint16_t count;
-	uint32_t tmp;
-	uint16_t num;
-	int rc;
-
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_IN_NUM, &tmp);
-	num = tmp;
-	rc = _ioctl(_fileno(sys_varient.iofile), IO_IN_GET, io_out_buffer);
-
-	count = pmodbus->bit_count_h;count <<= 8; count |= pmodbus->bit_count_l;
+	uint16_t count,startbit,i;
 	modbus_type_fc1_ack * pack = (modbus_type_fc1_ack *)pmodbus;
-	if(count) {
-		unsigned char B,b;
-		unsigned int i;
-		tmp = pmodbus->ref_number_h; tmp <<=8; tmp |= pmodbus->ref_number_l;
-		B = tmp / 8; b = tmp % 8;
-		
-		DEBUGMSG(THISINFO,("read bit counts(%d)\r\n",count));
-		for(i=0;i<count;i++) {
-			if(B < BITS_TO_BS(num)) {
-				if(io_out_buffer[B]&(1<<b)) {
-				    pack->bit_valus[i/8] |=  (1<<(i%8));
-				} else {
-					pack->bit_valus[i/8] &= ~(1<<(i%8));
-				}
-			} else {
-				pack->bit_valus[i/8] &= ~(1<<(i%8));
-			}
-			if(++b >= 8) {
-				b = 0;
-				++B;
-			}
-		}
-		pack->byte_count = BITS_TO_BS(count);
-		return 3 + pack->byte_count;  //加上头部的数据长度
-	} else {
-		DEBUGMSG(THISERROR,("pmodbus->bit_count == 0 error\r\n"));
-		pack->byte_count = 0;
-		return 3;
+	startbit = HSB_BYTES_TO_WORD(&pmodbus->ref_number_h);
+	count = HSB_BYTES_TO_WORD(&pmodbus->bit_count_h);
+
+	for(i=0;i<count;i++) {
+		unsigned char bit = get_bitval(startbit+i);
+		SET_BIT(&pack->bit_valus[0],i,bit);
 	}
-	return 0;
+	return 3 + pack->byte_count;  //加上头部的数据长度
 }
 
 int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 {
-	uint32_t tmp;
 	uint16_t index;
-	int rc;
 
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
-
-	index = pmodbus->ref_number_h; index <<= 8; index |= pmodbus->ref_number_l;
-	if(index < tmp) {
-		//范围内
-		unsigned char buffer[2];
-		buffer[1] = index >> 8;
-		buffer[0] = index & 0xFF;
-		if(pmodbus->onoff) {
-		    _ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buffer);
-		} else {
-			_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buffer);
-		}
+	index = HSB_BYTES_TO_WORD(&pmodbus->ref_number_h);
+	if(pmodbus->onoff) {
+		set_bitval(index,1);
+	} else {
+		set_bitval(index,0);
 	}
 	return sizeof(modbus_type_fc5_cmd);
 }
@@ -186,39 +109,25 @@ int  ForceSingleCoil(modbus_type_fc5_cmd * pmodbus)
 
 int force_multiple_coils(unsigned char * hexbuf,unsigned int len)
 {
-	unsigned int number,i;
-	unsigned char bytes  = hexbuf[6];
-	unsigned int address = hexbuf[2];
+	typedef struct _fmc_t
+	{
+		unsigned char slave_addr;
+		unsigned char function;
+		unsigned char start_ref_num_hi;
+		unsigned char start_ref_num_lo;
+		unsigned char bit_count_hi;
+		unsigned char bit_count_lo;
+		unsigned char byte_count;
+		unsigned char data_base;
+	} fmc_t;
+	uint16_t count,startbit,i;
+	fmc_t * pm = (fmc_t *)hexbuf;
+	unsigned char * iobits = &pm->data_base;
+	startbit = HSB_BYTES_TO_WORD(&pm->start_ref_num_hi);
+	count = HSB_BYTES_TO_WORD(&pm->bit_count_hi);
 
-	uint32_t tmp;
-	int rc;
-
-	rc = _ioctl(_fileno(sys_varient.iofile), GET_OUT_NUM, &tmp);
-
-	address <<= 8;
-	address |= hexbuf[3];
-	number = hexbuf[4];
-	number <<= 8;
-	number |= hexbuf[5];
-	if(((number+7)/8) != bytes) {
-		DEBUGMSG(THISERROR,("force_multiple_coils data LEN ERROR!\r\n"));
-		return 0;//接受的数据长度不对
-	}
-	DEBUGMSG(THISINFO,("force_multiple_coils stat(%d),len(%d) bytes\r\n",address,bytes));
-	for(i=0;i<number;i++) {
-		if(address < tmp) {
-			//读取，设置
-			unsigned char buffer[2];
-			buffer[0] = (unsigned char)(address&0xFF);
-			buffer[1] = (unsigned char)(address>>8);
-			if(hexbuf[7+i/8]&code_msk[i%8]) {
-				//设置继电器
-				_ioctl(_fileno(sys_varient.iofile), IO_SET_ONEBIT, buffer);
-			} else {
-				_ioctl(_fileno(sys_varient.iofile), IO_CLR_ONEBIT, buffer);
-			}
-		}
-		address++;
+	for(i=0;i<count;i++) {
+		set_bitval(startbit+i,BIT_IS_SET(iobits,i));
 	}
 	return 6;  //返回6个字节，不能动
 }
