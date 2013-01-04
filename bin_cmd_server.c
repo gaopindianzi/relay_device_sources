@@ -51,6 +51,8 @@
 #include "bsp.h"
 #include "compiler.h"
 #include "plc_io_inter.h"
+#include "StringPrecess.h"
+#include "plc_prase.h"
 
 #define THISINFO          0
 #define THISERROR         0
@@ -87,7 +89,7 @@ THREAD(bin_cmd_thread0, arg)
 {
 	uint8_t count = 0;
 	TCPSOCKET * sock;
-	char buff[120];
+	char buff[256];
 	uint32_t time = 15000;
 
 	NutThreadSetPriority(TCP_BIN_SERVER_PRI);
@@ -150,7 +152,7 @@ THREAD(bin_cmd_thread1, arg)
 {
 	uint8_t count = 0;
 	TCPSOCKET * sock;
-	char buff[120];
+	char buff[256];
 	uint32_t time = 15000;
 
 	NutThreadSetPriority(TCP_BIN_SERVER_PRI);
@@ -215,7 +217,7 @@ THREAD(bin_cmd_thread3, arg)
 {
 	uint8_t count = 0;
 	TCPSOCKET * sock;
-	char buff[120];
+	char buff[256];
 	uint32_t time = 15000;
 
 	NutThreadSetPriority(TCP_BIN_SERVER_PRI);
@@ -1238,7 +1240,7 @@ int CmdWriteRegister(TCPSOCKET * sock,CmdHead * cmd,int datasize)
     return CmdIoFinish(sock,tcmd,act_size);
 }
 
-void CmdPlcRead(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+int CmdPlcRead(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 {
 	typedef struct _plc_rw
 	{
@@ -1273,8 +1275,9 @@ void CmdPlcRead(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	} else {
 		//无效的指令
 	}
+	return 0;
 }
-void CmdPlcWrite(TCPSOCKET * sock,CmdHead * cmd,int datasize)
+int CmdPlcWrite(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 {
 	typedef struct _plc_rw
 	{
@@ -1306,6 +1309,7 @@ void CmdPlcWrite(TCPSOCKET * sock,CmdHead * cmd,int datasize)
 	} else {
 		//无效的指令
 	}
+	return 0;
 }
 
 const CmdMapToCmdCallType CmdCallMap[] = 
@@ -1358,6 +1362,26 @@ void DumpCommandRawData(void * buff,int len)
 	if(THISINFO)printf("\r\n");
 }
 
+
+void digital_write(unsigned int io_num_base,char * binval,unsigned int num)
+{
+	unsigned int i;
+	for(i=0;i<num;i++) {
+		set_bitval(io_num_base+i,(binval[i]=='1')?1:0);
+	}
+}
+
+void digital_read(unsigned int io_num_base,char * binval,unsigned int num)
+{
+	unsigned int i;
+	for(i=0;i<num;i++) {
+		binval[i] = get_bitval(io_num_base+i)?'1':'0';
+	}
+	binval[i] = 0;
+}
+
+
+
 void BinCmdPrase(TCPSOCKET * sock,void * buff,int len)
 {
 	uint8_t i;
@@ -1365,11 +1389,51 @@ void BinCmdPrase(TCPSOCKET * sock,void * buff,int len)
 	if(len  == 0) {
 		return ;
 	}
+	{
+		char strbuf[128];
+		char * pstr = (char *)buff;
+		if(StringMatchHead(pstr,"SCMD")) { //相等时
+			//是字符串命令
+			GetStringDiviseBy(pstr," ",strbuf,sizeof(strbuf),1);
+			if(StringMatchHead(strbuf,"DIGW")) { //相等时
+				unsigned int dig_base,dig_num;
+				GetStringDiviseBy(pstr," ",strbuf,sizeof(strbuf),2);
+				dig_base = StringDecToValueInt(strbuf);
+				GetStringDiviseBy(pstr," ",strbuf,sizeof(strbuf),3);
+				dig_num = StringDecToValueInt(strbuf);
+				GetStringDiviseBy(pstr," ",strbuf,sizeof(strbuf),4);
+				digital_write(dig_base,strbuf,dig_num);
+				NutTcpSend(sock,buff,len);
+				return ;
+			} else if(StringMatchHead(strbuf,"DIGR")) {
+				unsigned int dig_base,dig_num;
+				GetStringDiviseBy(pstr," ",strbuf,sizeof(strbuf),2);
+				if(THISINFO)printf("dig_base=%s",strbuf);
+				dig_base = StringDecToValueInt(strbuf);
+				GetStringDiviseBy(pstr," ",strbuf,sizeof(strbuf),3);
+				if(THISINFO)printf("dig_num=%s",strbuf);
+				dig_num = StringDecToValueInt(strbuf);
+				digital_read(dig_base,strbuf,dig_num);
+				if(THISINFO)printf("dig_val=%s",strbuf);
+				StringCopy(pstr,"SCMD DIGR \0");
+				StringAddStringRight(pstr,strbuf);
+				NutTcpSend(sock,pstr,StringLength(pstr));
+				if(THISINFO)printf("tcp send ack=%s",pstr);
+				return ;
+			} else {
+				StringCopy(pstr,"SCMD ERROR!");
+				NutTcpSend(sock,pstr,StringLength(pstr));
+				return ;
+			}
+		}
+	}
+
 	if(cmd->cmd < CMD_PLC_READ) {  //从这个指令之后，都是简易指令，不在提供复杂功能
 	    if(len < sizeof(CmdHead)) {
 		    return ;
 	    }
     }
+
 	if(THISINFO)DumpCommandRawData(buff,len);
 	i = 0;
 	while(1) {

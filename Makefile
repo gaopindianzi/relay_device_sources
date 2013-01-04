@@ -29,7 +29,7 @@ RELAY_PLATFORM_16CHIN_16CHOUT_30A = 11
 RELAY_PLATFORM_16CHOUT_HOST_RESET = 10
 #
 #定义当前需要编译的板类型
-BSP_BOARD_TYPE = $(EXT_BOARD_IS_4CHIN_4CHOUT)
+BSP_BOARD_TYPE = $(EXT_BOARD_IS_8CHIN_8CHOUT_V2)
 
 #
 #发布MAC地址
@@ -123,7 +123,7 @@ endif
 PROJ = $(HEX_FILE)
 WEBFILE = urom.c
 
-SRCS = plc_io_inter.c plc_prase.c main.c io_out.c bin_cmd_server.c bsp.c  time_handle.c udp_client_command.c app_check_pro.c regtable.c
+SRCS = plc_io_inter.c StringPrecess.c plc_prase.c main.c io_out.c bin_cmd_server.c bsp.c  time_handle.c udp_client_command.c app_check_pro.c regtable.c
 
 
 #485两个条件必须满足才编译
