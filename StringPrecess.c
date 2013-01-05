@@ -1,6 +1,7 @@
 #include "StringPrecess.h"
 #include <stdio.h>
 #include "debug.h"
+#include <debug.h>
 
 #define THISINFO          0
 #define THISERROR         0
@@ -300,7 +301,7 @@ void ValueIntToStringDec(char * buffer,unsigned int val)
 void ValueIntToStringBin(char * buffer,unsigned long  val)
 {
 	unsigned char i,index = 0;
-	ASSERT(buffer!=0);
+	//ASSERT(buffer!=0);
 	buffer[0] = '0';
 	buffer[1] = '\0';
 	i = 32;
@@ -373,7 +374,7 @@ unsigned char StringHex2ToValueInt(const char * str)
 unsigned int StringBinToValueInt(const char * str)
 {
 	int val = 0;
-	int len = strlen(str);
+	int len = StringLength(str);
 	int i;
 	//if(len > 16) len = 16;
 	for(i=0;i<len;i++) {
@@ -465,7 +466,7 @@ BOOL XML_NextItem(char * item_name,unsigned int buf_len)
 {
 	unsigned int len = 0;
 	char last_ch = *curr_pxml++;
-	ASSERT(last_ch == '<');
+	//ASSERT(last_ch == '<');
 	while(1) { //</
 		char ch = *curr_pxml;
 		if(ch == '\0') {
@@ -501,8 +502,8 @@ BOOL XML_GetItemValue(char * str_buf,unsigned int buf_len)
 {
 	char last_ch;
 	unsigned int len = 0;
-	ASSERT(str_buf);
-	ASSERT(buf_len>0);
+	//ASSERT(str_buf);
+	//ASSERT(buf_len>0);
 	while(buf_len) {
 		char ch = *curr_pxml;
 		if(ch == '\0') {
