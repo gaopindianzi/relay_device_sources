@@ -186,7 +186,7 @@ THREAD(ext16chioout_thread, arg)
 	//构造发送数据结构
 	pmodbus->slave_addr = 247;
 	pmodbus->function_code = 15;
-	pmodbus->start_addr_hi = 0;
+	pmodbus->start_addr_hi = 0x02;
 	pmodbus->start_addr_lo = 0;
 	pmodbus->quantity_coils_hi = 0;
 	pmodbus->quantity_coils_lo = 16;
