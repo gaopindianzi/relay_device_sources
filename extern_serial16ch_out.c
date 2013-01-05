@@ -173,8 +173,8 @@ struct modbus_rtu_force_multi_coils
 	unsigned char byte_count;
 	unsigned char force_data_1;
 	unsigned char force_data_2;
-	unsigned char crc_hi;
 	unsigned char crc_lo;
+	unsigned char crc_hi;
 };
 
 #define FORCE_DATA_SIZE    2  //2个字节
@@ -186,7 +186,7 @@ THREAD(ext16chioout_thread, arg)
 	//构造发送数据结构
 	pmodbus->slave_addr = 247;
 	pmodbus->function_code = 15;
-	pmodbus->start_addr_hi = 0x02;
+	pmodbus->start_addr_hi = 0;
 	pmodbus->start_addr_lo = 0;
 	pmodbus->quantity_coils_hi = 0;
 	pmodbus->quantity_coils_lo = 16;
@@ -202,12 +202,12 @@ THREAD(ext16chioout_thread, arg)
 					unsigned int crc = 0;
 					//构建发送程序
 					//有一个BUG，也许是串口的....
-					if(THISINFO)printf("ext io out 16 ch send data...\r\n");
+					if(THISINFO)printf("ext io out 16 ch send data:0x%X%X\r\n",io_out[3],io_out[2]);
 					pmodbus->force_data_1 = io_out[3]; //从16路开始
 					pmodbus->force_data_2 = io_out[2]; //从16路开始
 					crc = CRC16(buffer,sizeof(buffer) - 2);
-					pmodbus->crc_lo = crc >> 8;
-					pmodbus->crc_hi = crc & 0xFF;
+					pmodbus->crc_hi = crc >> 8;
+					pmodbus->crc_lo = crc & 0xFF;
 					fwrite(buffer,sizeof(char),sizeof(buffer),sys_varient.stream_max485);
 				} else {
 					if(THISERROR)printf("sys_io.stream_max485 not opened!\r\n");
